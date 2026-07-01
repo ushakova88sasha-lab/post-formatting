@@ -947,6 +947,17 @@ select {
   color: var(--text);
 }
 
+.post-retention-hint {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  background: rgba(243, 156, 18, 0.08);
+  border: 1px solid rgba(243, 156, 18, 0.22);
+  border-radius: 8px;
+}
+
 .settings-view {
   max-width: 520px;
 }

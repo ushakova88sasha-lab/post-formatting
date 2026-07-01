@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
+from app.post_retention import purge_expired_posts_session
 from app.routers import auth, posts, settings as settings_router, uploads
 from app.scheduler import start_scheduler, stop_scheduler
 from app.settings_store import get_channel_id
@@ -21,6 +22,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 async def lifespan(app: FastAPI):
     init_db()
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    purge_expired_posts_session()
     await refresh_telegram_state(app)
     start_scheduler()
     yield

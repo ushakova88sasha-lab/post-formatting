@@ -2,6 +2,7 @@ from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.database import Post, PostStatus, SessionLocal
 from app.telegram_client import TelegramError, send_message
@@ -82,6 +83,13 @@ def start_scheduler() -> None:
     if not scheduler.running:
         scheduler.start()
         restore_scheduled_jobs()
+        from app.post_retention import purge_expired_posts_session
+
+        scheduler.add_job(
+            trigger=IntervalTrigger(hours=6),
+            id="purge_expired_posts",
+            replace_existing=True,
+        )
 
 
 def stop_scheduler() -> None:

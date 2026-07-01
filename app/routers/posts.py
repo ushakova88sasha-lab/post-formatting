@@ -5,8 +5,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import require_user
+from app.config import settings
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
+from app.post_retention import purge_expired_posts
 from app.post_utils import (
     DEFAULT_POST_TITLE,
     display_post_title,
@@ -72,9 +74,13 @@ def _sync_generic_titles(posts: list[Post], db: Session) -> None:
 
 @router.get("")
 async def list_posts(db: Session = Depends(get_db), _: str = Depends(require_user)):
+    purge_expired_posts(db)
     posts = db.query(Post).order_by(Post.updated_at.desc()).all()
     _sync_generic_titles(posts, db)
-    return [post_to_dict(p) for p in posts]
+    return {
+        "posts": [post_to_dict(p) for p in posts],
+        "retention_days": settings.post_retention_days,
+    }
 
 
 @router.post("")

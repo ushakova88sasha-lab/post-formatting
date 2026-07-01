@@ -2,6 +2,7 @@ const { fetch: authFetch, redirectToLogin } = window.authClient;
 
 let currentPostId = null;
 let posts = [];
+let retentionDays = 7;
 let previewTimer = null;
 let currentView = "posts";
 
@@ -44,6 +45,14 @@ function postListTitle(post) {
     return post.title;
   }
   return post.display_title || post.title || "Без названия";
+}
+
+function updateRetentionHint() {
+  const el = document.getElementById("post-retention-hint");
+  if (!el) return;
+  const days = retentionDays;
+  const label = days === 1 ? "день" : days >= 2 && days <= 4 ? "дня" : "дней";
+  el.textContent = `Посты хранятся ${days} ${label}, затем удаляются автоматически`;
 }
 
 function renderPostList() {
@@ -198,7 +207,13 @@ function setChannelLabel(channel) {
 
 async function loadPosts() {
   const data = await api("/api/posts");
-  posts = Array.isArray(data) ? data : [];
+  if (Array.isArray(data)) {
+    posts = data;
+  } else {
+    posts = Array.isArray(data?.posts) ? data.posts : [];
+    retentionDays = data?.retention_days ?? 7;
+  }
+  updateRetentionHint();
   renderPostList();
 }
 

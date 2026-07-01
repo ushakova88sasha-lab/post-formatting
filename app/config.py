@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/posts.db"
     # Публичный URL сервера — нужен Telegram для загрузки картинок по HTTP
     public_base_url: str = "http://localhost:8000"
+    post_retention_days: int = 7
 
 
 settings = Settings()
