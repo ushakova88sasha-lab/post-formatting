@@ -357,7 +357,7 @@
       });
 
       if (res.status === 401) {
-        redirectToLogin();
+        window.authClient.redirectToLogin();
         return;
       }
 

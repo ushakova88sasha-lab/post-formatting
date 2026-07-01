@@ -1,24 +1,4 @@
-async function api(path, options = {}, { redirectOn401 = false } = {}) {
-  const res = await fetch(path, {
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (res.status === 401) {
-    if (redirectOn401) {
-      redirectToLogin();
-    }
-    return null;
-  }
-
-  if (!res.ok) {
-    throw new Error(data.detail || "Ошибка запроса");
-  }
-  return data;
-}
+const { fetch: authFetch, redirectToApp, clearRedirectGuard } = window.authClient;
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -29,21 +9,26 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   const password = document.getElementById("password").value;
 
   try {
-    const data = await api("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
-    });
+    const data = await authFetch(
+      "/api/auth/login",
+      {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      },
+      { redirectOn401: false }
+    );
     if (!data) {
       throw new Error("Неверный логин или пароль");
     }
-    window.location.href = "/";
+    clearRedirectGuard();
+    redirectToApp();
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.classList.remove("hidden");
   }
 });
 
-// Если уже авторизован — на главную (без редиректа при 401)
-api("/api/auth/me").then((data) => {
+// Уже авторизован — на главную. При 401 остаёмся на /login.
+authFetch("/api/auth/me", {}, { redirectOn401: false }).then((data) => {
   if (data) redirectToApp();
 });

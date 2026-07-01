@@ -1,27 +1,11 @@
+const { fetch: authFetch, redirectToLogin } = window.authClient;
+
 let currentPostId = null;
 let posts = [];
 let previewTimer = null;
 
 async function api(path, options = {}) {
-  const res = await fetch(path, {
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
-
-  if (res.status === 401) {
-    redirectToLogin();
-    return null;
-  }
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const detail = Array.isArray(data.detail)
-      ? data.detail.map((d) => d.msg || d).join(", ")
-      : data.detail;
-    throw new Error(detail || "Ошибка запроса");
-  }
-  return data;
+  return authFetch(path, options, { redirectOn401: true });
 }
 
 function showAlert(message, type = "error") {
@@ -251,14 +235,6 @@ async function init() {
   }
 }
 
-async function bootstrap() {
-  try {
-    await init();
-  } catch {
-    redirectToLogin();
-  }
-}
-
 document.getElementById("post-content").addEventListener("input", () => {
   clearTimeout(previewTimer);
   previewTimer = setTimeout(updatePreview, 300);
@@ -275,4 +251,4 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   redirectToLogin();
 });
 
-bootstrap();
+init();

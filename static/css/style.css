@@ -858,6 +858,19 @@ select {
   line-height: 1.5;
 }
 
+.auth-loop-banner {
+  position: fixed;
+  inset: 0 auto auto 0;
+  right: 0;
+  z-index: 2000;
+  padding: 0.85rem 1rem;
+  background: rgba(231, 76, 60, 0.95);
+  color: #fff;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
