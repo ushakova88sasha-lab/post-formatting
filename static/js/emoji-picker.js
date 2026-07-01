@@ -154,6 +154,40 @@
     });
   }
 
+  function positionPopover() {
+    const btn = getButton();
+    const popover = getPopover();
+    if (!btn || !popover) return;
+
+    const margin = 8;
+    const rect = btn.getBoundingClientRect();
+
+    popover.style.visibility = "hidden";
+    popover.classList.remove("hidden");
+    const popoverRect = popover.getBoundingClientRect();
+    popover.style.visibility = "";
+
+    let top = rect.bottom + margin;
+    let left = rect.left;
+
+    if (left + popoverRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - popoverRect.width - margin;
+    }
+    if (left < margin) {
+      left = margin;
+    }
+
+    if (top + popoverRect.height > window.innerHeight - margin) {
+      top = rect.top - popoverRect.height - margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.left = `${Math.round(left)}px`;
+  }
+
   function show() {
     const popover = getPopover();
     const btn = getButton();
@@ -161,6 +195,7 @@
 
     renderTabs();
     renderGrid(activeCategory);
+    positionPopover();
     popover.classList.remove("hidden");
     open = true;
     btn.classList.add("active");
@@ -191,6 +226,8 @@
     const popover = getPopover();
     if (!btn || !popover) return;
 
+    document.body.appendChild(popover);
+
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -199,7 +236,7 @@
 
     document.addEventListener("click", (e) => {
       if (!open) return;
-      if (e.target.closest(".fmt-emoji-wrap")) return;
+      if (e.target.closest(".fmt-emoji-wrap") || e.target.closest("#emoji-picker-popover")) return;
       close();
     });
 
@@ -208,6 +245,18 @@
         close();
       }
     });
+
+    window.addEventListener("resize", () => {
+      if (open) positionPopover();
+    });
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (open) positionPopover();
+      },
+      true
+    );
 
     window.emojiPicker = { close, insert: insertIntoEditor };
   }
