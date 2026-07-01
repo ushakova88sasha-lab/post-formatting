@@ -19,13 +19,42 @@
 
   <div class="layout">
     <aside class="sidebar">
-      <h2>Посты</h2>
-      <button class="btn btn-primary" id="new-post-btn" style="width:100%; margin-bottom: 0.75rem;">+ Новый пост</button>
-      <ul class="post-list" id="post-list"></ul>
+      <nav class="sidebar-nav">
+        <button type="button" class="sidebar-tab active" data-view="posts">Посты</button>
+        <button type="button" class="sidebar-tab" data-view="settings">Настройки</button>
+      </nav>
+      <div id="sidebar-posts" class="sidebar-panel">
+        <button class="btn btn-primary" id="new-post-btn" style="width:100%; margin-bottom: 0.75rem;">+ Новый пост</button>
+        <ul class="post-list" id="post-list"></ul>
+      </div>
     </aside>
 
     <main class="main">
       <div id="alert" class="alert hidden"></div>
+
+      <div id="settings-view" class="settings-view hidden">
+        <h2 class="settings-title">Telegram</h2>
+        <p class="settings-desc">Токен бота и канал для публикации постов.</p>
+
+        <div id="settings-status" class="settings-status"></div>
+
+        <form id="settings-form" class="settings-form">
+          <div class="form-group">
+            <label for="bot-token">Токен бота</label>
+            <input type="password" id="bot-token" class="input" autocomplete="off">
+            <p class="field-hint" id="token-hint"></p>
+          </div>
+          <div class="form-group">
+            <label for="channel-id">Канал</label>
+            <input type="text" id="channel-id" class="input" placeholder="@my_channel или -100..." required>
+            <p class="field-hint">Username канала (@...) или числовой ID</p>
+          </div>
+          <div class="settings-actions">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <button type="button" class="btn btn-secondary" id="verify-telegram-btn">Проверить подключение</button>
+          </div>
+        </form>
+      </div>
 
       <div id="editor-view" class="hidden">
         <div class="editor-header">

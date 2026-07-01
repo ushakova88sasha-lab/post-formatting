@@ -28,7 +28,13 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   }
 });
 
-// Уже авторизован — на главную. При 401 остаёмся на /login.
+document.getElementById("open-app-btn").addEventListener("click", () => {
+  clearRedirectGuard();
+  redirectToApp();
+});
+
 authFetch("/api/auth/me", {}, { redirectOn401: false }).then((data) => {
-  if (data) redirectToApp();
+  if (!data) return;
+  document.getElementById("already-logged-in").classList.remove("hidden");
+  document.getElementById("login-form").classList.add("hidden");
 });

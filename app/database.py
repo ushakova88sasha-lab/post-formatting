@@ -35,6 +35,13 @@ class Post(Base):
     )
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")
+
+
 engine = create_engine(
     settings.database_url,
     connect_args={"check_same_thread": False},
@@ -47,6 +54,10 @@ def init_db() -> None:
 
     os.makedirs("data", exist_ok=True)
     Base.metadata.create_all(bind=engine)
+
+    from app.settings_store import seed_from_env
+
+    seed_from_env()
 
 
 def get_db():

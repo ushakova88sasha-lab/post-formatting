@@ -12,8 +12,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    telegram_bot_token: str
-    telegram_channel_id: str
+    telegram_bot_token: str = ""
+    telegram_channel_id: str = ""
     admin_username: str
     admin_password: str
     session_secret: str

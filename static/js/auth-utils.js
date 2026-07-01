@@ -120,4 +120,8 @@
   // Обратная совместимость для существующих вызовов
   window.redirectToLogin = redirectToLogin;
   window.redirectToApp = redirectToApp;
+
+  if (isLoginPage()) {
+    clearRedirectGuard();
+  }
 })();

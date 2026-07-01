@@ -3,6 +3,7 @@ const { fetch: authFetch, redirectToLogin } = window.authClient;
 let currentPostId = null;
 let posts = [];
 let previewTimer = null;
+let currentView = "posts";
 
 async function api(path, options = {}) {
   return authFetch(path, options, { redirectOn401: true });
@@ -72,6 +73,114 @@ function showEditor(show) {
   document.getElementById("empty-view").classList.toggle("hidden", show);
 }
 
+function showView(view) {
+  currentView = view;
+  const isPosts = view === "posts";
+  const isSettings = view === "settings";
+
+  document.querySelectorAll(".sidebar-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.view === view);
+  });
+
+  document.getElementById("sidebar-posts").classList.toggle("hidden", !isPosts);
+  document.getElementById("settings-view").classList.toggle("hidden", !isSettings);
+
+  if (isSettings) {
+    document.getElementById("editor-view").classList.add("hidden");
+    document.getElementById("empty-view").classList.add("hidden");
+    loadTelegramSettings();
+    return;
+  }
+
+  if (currentPostId) {
+    showEditor(true);
+  } else {
+    showEditor(false);
+  }
+}
+
+function renderSettingsStatus(data) {
+  const el = document.getElementById("settings-status");
+  if (!el) return;
+
+  const botLine = data.bot_connected
+    ? `<span class="status-ok">Бот подключён</span>${data.bot_username ? ` (@${data.bot_username})` : ""}`
+    : `<span class="status-warn">Бот не подключён</span>`;
+
+  const channelLine = data.channel_display
+    ? `Канал: <strong>${escapeHtml(data.channel_display)}</strong>`
+    : "Канал не указан";
+
+  const tokenLine = data.token_configured
+    ? `Токен: ${escapeHtml(data.token_hint)}`
+    : '<span class="status-warn">Токен не указан</span>';
+
+  el.innerHTML = `${botLine}<br>${channelLine}<br>${tokenLine}`;
+}
+
+async function loadTelegramSettings() {
+  try {
+    const data = await api("/api/settings/telegram");
+    if (!data) return;
+
+    document.getElementById("channel-id").value = data.channel_id || "";
+    document.getElementById("bot-token").value = "";
+    document.getElementById("token-hint").textContent = data.token_configured
+      ? `Текущий токен: ${data.token_hint}. Оставьте поле пустым, чтобы не менять.`
+      : "Получите токен у @BotFather в Telegram.";
+
+    renderSettingsStatus(data);
+    setChannelLabel(data.channel_display);
+  } catch (err) {
+    showAlert(err.message || "Не удалось загрузить настройки");
+  }
+}
+
+async function saveTelegramSettings(event) {
+  event.preventDefault();
+
+  const channelId = document.getElementById("channel-id").value.trim();
+  const botToken = document.getElementById("bot-token").value.trim();
+
+  if (!channelId) {
+    showAlert("Укажите канал");
+    return;
+  }
+
+  const payload = { channel_id: channelId };
+  if (botToken) {
+    payload.bot_token = botToken;
+  }
+
+  try {
+    const data = await api("/api/settings/telegram", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    if (!data) return;
+
+    document.getElementById("bot-token").value = "";
+    renderSettingsStatus(data);
+    setChannelLabel(data.channel_display);
+    showAlert("Настройки сохранены", "success");
+  } catch (err) {
+    showAlert(err.message);
+  }
+}
+
+async function verifyTelegramSettings() {
+  try {
+    const data = await api("/api/settings/telegram/verify", { method: "POST" });
+    if (!data) return;
+
+    renderSettingsStatus(data);
+    setChannelLabel(data.channel_display);
+    showAlert("Подключение успешно", "success");
+  } catch (err) {
+    showAlert(err.message);
+  }
+}
+
 function setChannelLabel(channel) {
   const label = document.getElementById("channel-label");
   if (!label) return;
@@ -136,6 +245,9 @@ async function updatePreview() {
 }
 
 async function createPost() {
+  if (currentView !== "posts") {
+    showView("posts");
+  }
   const post = await api("/api/posts", {
     method: "POST",
     body: JSON.stringify({ title: "Новый пост", content: "" }),
@@ -245,6 +357,13 @@ document.getElementById("empty-new-btn").addEventListener("click", createPost);
 document.getElementById("save-btn").addEventListener("click", savePost);
 document.getElementById("publish-btn").addEventListener("click", publishPost);
 document.getElementById("schedule-btn").addEventListener("click", schedulePost);
+
+document.querySelectorAll(".sidebar-tab").forEach((tab) => {
+  tab.addEventListener("click", () => showView(tab.dataset.view));
+});
+
+document.getElementById("settings-form").addEventListener("submit", saveTelegramSettings);
+document.getElementById("verify-telegram-btn").addEventListener("click", verifyTelegramSettings);
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await api("/api/auth/logout", { method: "POST" });

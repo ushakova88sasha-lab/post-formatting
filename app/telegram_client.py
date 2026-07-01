@@ -1,8 +1,8 @@
 import httpx
 
-from app.config import settings
 from app.image_host import resolve_media_for_telegram
 from app.markdown_telegram import prepare_markdown_for_telegram
+from app.settings_store import get_bot_token, get_channel_id
 
 
 class TelegramError(Exception):
@@ -11,11 +11,23 @@ class TelegramError(Exception):
         self.status_code = status_code
 
 
+def _require_telegram_config() -> tuple[str, str]:
+    token = get_bot_token()
+    channel = get_channel_id()
+    if not token:
+        raise TelegramError("Укажите токен бота в Настройках")
+    if not channel:
+        raise TelegramError("Укажите канал в Настройках")
+    return token, channel
+
+
 async def send_message(text: str) -> int:
     """Отправляет пост в канал через Rich Messages API. Возвращает message_id."""
     markdown = text.strip()
     if not markdown:
         raise TelegramError("Пост пустой")
+
+    token, channel = _require_telegram_config()
 
     try:
         markdown = await resolve_media_for_telegram(markdown)
@@ -24,9 +36,9 @@ async def send_message(text: str) -> int:
 
     markdown = prepare_markdown_for_telegram(markdown)
 
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendRichMessage"
+    url = f"https://api.telegram.org/bot{token}/sendRichMessage"
     payload = {
-        "chat_id": settings.telegram_channel_id,
+        "chat_id": channel,
         "rich_message": {
             "markdown": markdown,
         },
@@ -44,8 +56,12 @@ async def send_message(text: str) -> int:
 
 
 async def verify_bot() -> dict:
-    """Проверяет токен бота при старте."""
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe"
+    """Проверяет токен бота."""
+    token = get_bot_token()
+    if not token:
+        raise TelegramError("Токен бота не указан")
+
+    url = f"https://api.telegram.org/bot{token}/getMe"
     async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.get(url)
         data = response.json()

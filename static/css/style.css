@@ -871,6 +871,96 @@ select {
   font-weight: 600;
 }
 
+.already-logged-in {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.already-logged-in p {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+}
+
+.sidebar-nav {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sidebar-tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.sidebar-tab.active {
+  background: var(--surface-2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.settings-view {
+  max-width: 520px;
+}
+
+.settings-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+}
+
+.settings-desc {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.settings-status {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.settings-status .status-ok {
+  color: var(--success);
+}
+
+.settings-status .status-warn {
+  color: var(--warning);
+}
+
+.settings-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
