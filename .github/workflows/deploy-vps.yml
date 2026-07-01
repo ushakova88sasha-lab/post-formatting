@@ -3,7 +3,6 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main
       - cursor/telegram-admin-panel-684e
   workflow_dispatch:
 
@@ -21,7 +20,7 @@ jobs:
           script_stop: true
           script: |
             set -e
-            BRANCH="${{ github.ref_name }}"
+            BRANCH="cursor/telegram-admin-panel-684e"
             APP_DIR=/opt/post-formatting
 
             cd "$APP_DIR"
@@ -35,4 +34,4 @@ jobs:
             systemctl restart telegram-admin
             systemctl is-active telegram-admin
 
-            echo "Deployed branch $BRANCH at $(git rev-parse --short HEAD)"
+            echo "Deployed $BRANCH at $(git rev-parse --short HEAD)"
