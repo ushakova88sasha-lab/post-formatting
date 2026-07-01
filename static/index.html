@@ -72,6 +72,18 @@
                 <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
               </div>
             </div>
+            <div class="editor-toolbar editor-toolbar-row2" id="editor-toolbar-blocks">
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="ulist" title="Маркированный список">•</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="olist" title="Нумерованный список">1.</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="check-open" title="Чек-лист (не выполнено)">☐</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="check-done" title="Чек-лист (выполнено)">☑</button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn" data-action="table" title="Вставить таблицу">⊞ Таблица</button>
+              </div>
+            </div>
             <div class="panel-body">
               <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
             </div>
@@ -96,9 +108,8 @@
         </div>
 
         <p class="markdown-hint">
-          Rich Markdown Telegram: заголовки, B/I/S/U, маркер <code>==текст==</code>, спойлер <code>||текст||</code>,
-          код <code>`текст`</code>, формулы <code>$E=mc^2$</code>, индексы <code>H&lt;sub&gt;2&lt;/sub&gt;O</code>,
-          ссылки <code>[текст](url)</code>, картинки 🖼.
+          Rich Markdown: списки, чек-листы <code>- [ ]</code> / <code>- [x]</code>, таблицы (кнопка ⊞).
+          Также: заголовки, B/I/S/U, маркер, спойлер, код, формулы, ссылки, картинки.
         </p>
       </div>
 

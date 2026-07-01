@@ -1,5 +1,5 @@
 /**
- * Панель форматирования: H1–H3, жирный, курсив, зачёркнутый, изображения.
+ * Панель форматирования: текст, блоки, изображения.
  */
 (function () {
   const HEADER_RE = /^(#{1,3})\s+(.*)$/;
@@ -24,6 +24,62 @@
     }
 
     return { value, start, end };
+  }
+
+  function stripListMarker(line) {
+    return line
+      .replace(/^(\s*)[-*+]\s+\[[ xX]\]\s+/, "$1")
+      .replace(/^(\s*)[-*+]\s+/, "$1")
+      .replace(/^(\s*)\d+\.\s+/, "$1");
+  }
+
+  function applyLinesTransform(transform) {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const { value, start, end } = getLinesRange(textarea);
+    const block = value.substring(start, end);
+    const lines = block.split("\n");
+    const newLines = lines.map((line, idx) => transform(line, idx));
+    const newBlock = newLines.join("\n");
+
+    textarea.value = value.substring(0, start) + newBlock + value.substring(end);
+    textarea.setSelectionRange(start, start + newBlock.length);
+    textarea.focus();
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function applyBulletList() {
+    applyLinesTransform((line) => `- ${stripListMarker(line)}`);
+  }
+
+  function applyOrderedList() {
+    let n = 0;
+    applyLinesTransform((line) => {
+      n += 1;
+      return `${n}. ${stripListMarker(line)}`;
+    });
+  }
+
+  function applyChecklist(checked) {
+    const prefix = checked ? "- [x] " : "- [ ] ";
+    applyLinesTransform((line) => prefix + stripListMarker(line));
+  }
+
+  function insertTable() {
+    let cols = parseInt(window.prompt("Количество столбцов:", "2"), 10) || 2;
+    let rows = parseInt(window.prompt("Количество строк (без шапки):", "2"), 10) || 2;
+    cols = Math.min(Math.max(cols, 1), 5);
+    rows = Math.min(Math.max(rows, 1), 10);
+
+    const headers = Array.from({ length: cols }, (_, i) => `Заголовок ${i + 1}`);
+    const sep = headers.map((_, i) => (i === cols - 1 ? ":---:" : ":---"));
+    let table = `| ${headers.join(" | ")} |\n| ${sep.join(" | ")} |\n`;
+    for (let r = 0; r < rows; r += 1) {
+      const cells = Array.from({ length: cols }, (_, i) => `Ячейка ${r + 1}.${i + 1}`);
+      table += `| ${cells.join(" | ")} |\n`;
+    }
+    insertBlockAtCursor(table.trimEnd());
   }
 
   function stripHeader(line) {
@@ -192,64 +248,81 @@
     if (fileInput) fileInput.disabled = !enabled;
   }
 
-  function initToolbar() {
-    const toolbar = document.getElementById("editor-toolbar");
-    const fileInput = document.getElementById("image-file-input");
-    if (!toolbar) return;
+  function handleToolbarClick(e) {
+    const btn = e.target.closest(".fmt-btn");
+    if (!btn || btn.disabled) return;
 
-    toolbar.addEventListener("click", (e) => {
-      const btn = e.target.closest(".fmt-btn");
-      if (!btn || btn.disabled) return;
-
-      const action = btn.dataset.action;
-      if (action === "image") {
-        e.preventDefault();
-        fileInput?.click();
-        return;
-      }
-
+    const action = btn.dataset.action;
+    if (action === "image") {
       e.preventDefault();
-      switch (action) {
-        case "h1":
-          applyHeader(1);
-          break;
-        case "h2":
-          applyHeader(2);
-          break;
-        case "h3":
-          applyHeader(3);
-          break;
-        case "bold":
-          wrapSelection("**", "**");
-          break;
-        case "italic":
-          wrapSelection("_", "_");
-          break;
-        case "strike":
-          wrapSelection("~~", "~~");
-          break;
-        case "underline":
-          wrapSelection("<u>", "</u>");
-          break;
-        case "marker":
-          wrapSelection("==", "==");
-          break;
-        case "spoiler":
-          wrapSelection("||", "||");
-          break;
-        case "code":
-          wrapSelection("`", "`");
-          break;
-        case "sub":
-          wrapSelection("<sub>", "</sub>");
-          break;
-        case "math":
-          wrapMath();
-          break;
-        case "link":
-          insertLink();
-          break;
-      }
+      document.getElementById("image-file-input")?.click();
+      return;
+    }
+
+    e.preventDefault();
+    switch (action) {
+      case "h1":
+        applyHeader(1);
+        break;
+      case "h2":
+        applyHeader(2);
+        break;
+      case "h3":
+        applyHeader(3);
+        break;
+      case "bold":
+        wrapSelection("**", "**");
+        break;
+      case "italic":
+        wrapSelection("_", "_");
+        break;
+      case "strike":
+        wrapSelection("~~", "~~");
+        break;
+      case "underline":
+        wrapSelection("<u>", "</u>");
+        break;
+      case "marker":
+        wrapSelection("==", "==");
+        break;
+      case "spoiler":
+        wrapSelection("||", "||");
+        break;
+      case "code":
+        wrapSelection("`", "`");
+        break;
+      case "sub":
+        wrapSelection("<sub>", "</sub>");
+        break;
+      case "math":
+        wrapMath();
+        break;
+      case "link":
+        insertLink();
+        break;
+      case "ulist":
+        applyBulletList();
+        break;
+      case "olist":
+        applyOrderedList();
+        break;
+      case "check-open":
+        applyChecklist(false);
+        break;
+      case "check-done":
+        applyChecklist(true);
+        break;
+      case "table":
+        insertTable();
+        break;
+    }
+  }
+
+  function initToolbar() {
+    const fileInput = document.getElementById("image-file-input");
+
+    document.querySelectorAll(".editor-toolbar").forEach((toolbar) => {
+      toolbar.addEventListener("click", handleToolbarClick);
     });
 
     fileInput?.addEventListener("change", () => {

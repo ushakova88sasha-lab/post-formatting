@@ -379,6 +379,12 @@ select {
   flex-wrap: wrap;
 }
 
+.editor-toolbar-row2 {
+  border-top: none;
+  padding-top: 0.35rem;
+  padding-bottom: 0.55rem;
+}
+
 .fmt-group {
   display: flex;
   align-items: center;
@@ -553,6 +559,64 @@ select {
   padding: 0.4rem;
   background: rgba(0, 0, 0, 0.15);
   border-radius: 6px;
+}
+
+/* Списки и таблицы */
+.tg-message.tg-rich p {
+  margin: 0.45rem 0;
+}
+
+.tg-message.tg-rich ul:not(.tg-checklist),
+.tg-message.tg-rich ol {
+  margin: 0.5rem 0;
+  padding-left: 1.4rem;
+}
+
+.tg-message.tg-rich li {
+  margin: 0.2rem 0;
+}
+
+.tg-message.tg-rich ul.tg-checklist {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding-left: 0;
+}
+
+.tg-message.tg-rich li.tg-check {
+  position: relative;
+  padding-left: 1.6rem;
+  margin: 0.3rem 0;
+}
+
+.tg-message.tg-rich li.tg-check::before {
+  content: "☐";
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.tg-message.tg-rich li.tg-check.checked::before {
+  content: "☑";
+  color: var(--success);
+}
+
+.tg-message.tg-rich table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.tg-message.tg-rich th,
+.tg-message.tg-rich td {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+}
+
+.tg-message.tg-rich th {
+  background: var(--surface-2);
+  font-weight: 600;
 }
 
 .tg-message a { color: #6ab2f2; }
