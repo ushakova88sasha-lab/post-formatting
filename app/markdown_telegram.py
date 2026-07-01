@@ -26,7 +26,8 @@ def _preserve_line_breaks(segment: str) -> str:
             break
 
         nxt = lines[i + 1]
-        if not nxt.strip():
+        # Пустая строка — разделитель абзацев (двойной перенос), не <br>
+        if not line.strip() or not nxt.strip():
             parts.append("\n")
         elif _is_table_row(line) and _is_table_row(nxt):
             parts.append("\n")
