@@ -86,6 +86,7 @@ def start_scheduler() -> None:
         from app.post_retention import purge_expired_posts_session
 
         scheduler.add_job(
+            purge_expired_posts_session,
             trigger=IntervalTrigger(hours=6),
             id="purge_expired_posts",
             replace_existing=True,

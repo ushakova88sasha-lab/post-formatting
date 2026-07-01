@@ -33,5 +33,7 @@ jobs:
 
             systemctl restart telegram-admin
             systemctl is-active telegram-admin
+            sleep 2
+            curl -fsS http://127.0.0.1:8000/health
 
             echo "Deployed $BRANCH at $(git rev-parse --short HEAD)"
