@@ -47,6 +47,7 @@ def strip_markdown(text: str) -> str:
         flags=re.IGNORECASE,
     )
     text = re.sub(r"<br\s*/?>", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r'<p style="text-align:\s*center">([\s\S]*?)</p>', r"\1", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     text = _IMAGE_RE.sub(lambda match: (match.group(3) or match.group(1) or " "), text)
     text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)

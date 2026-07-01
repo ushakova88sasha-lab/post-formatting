@@ -3,6 +3,7 @@
  */
 (function () {
   const HEADER_RE = /^(#{1,3})\s+(.*)$/;
+  const CENTER_BLOCK_RE = /^<p style="text-align:\s*center">([\s\S]*)<\/p>$/i;
 
   function getTextarea() {
     return document.getElementById("post-content");
@@ -186,6 +187,21 @@
       if (/^\s*>/.test(line)) return line;
       return `> ${line}`;
     });
+  }
+
+  function applyCenter() {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const { value, start, end } = getLinesRange(textarea);
+    const block = value.substring(start, end);
+    const match = block.match(CENTER_BLOCK_RE);
+    const newBlock = match ? match[1] : `<p style="text-align: center">${block}</p>`;
+
+    textarea.value = value.substring(0, start) + newBlock + value.substring(end);
+    textarea.setSelectionRange(start, start + newBlock.length);
+    textarea.focus();
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
   async function insertDetails() {
@@ -486,6 +502,9 @@
         break;
       case "quote":
         insertQuote();
+        break;
+      case "center":
+        applyCenter();
         break;
       case "details":
         insertDetails();

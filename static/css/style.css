@@ -541,9 +541,24 @@ select {
 }
 
 .fmt-btn[data-action="marker"] {
-  background: rgba(255, 235, 59, 0.25);
   color: #e6d96a;
   font-weight: 700;
+}
+
+.fmt-marker-icon {
+  background: rgba(255, 235, 59, 0.45);
+  color: inherit;
+  padding: 0 0.2em;
+  border-radius: 2px;
+}
+
+.markdown-hint .fmt-marker-icon {
+  font-size: 0.85em;
+}
+
+.fmt-btn[data-action="center"] {
+  font-size: 1.05rem;
+  letter-spacing: -0.05em;
 }
 
 .tg-message u { text-decoration: underline; }
@@ -556,6 +571,12 @@ select {
   color: inherit;
   padding: 0 0.15em;
   border-radius: 2px;
+}
+
+.tg-message p[style*="text-align: center"],
+.tg-message p.tg-center {
+  text-align: center;
+  width: 100%;
 }
 
 .tg-message .tg-spoiler {
