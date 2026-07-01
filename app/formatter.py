@@ -4,7 +4,12 @@ import re
 import markdown
 
 
+def _preprocess_strikethrough(text: str) -> str:
+    return re.sub(r"~~([^~\n]+?)~~", r"<del>\1</del>", text)
+
+
 def _markdown_to_html(text: str) -> str:
+    text = _preprocess_strikethrough(text)
     return markdown.markdown(
         text,
         extensions=["fenced_code", "nl2br", "sane_lists"],
