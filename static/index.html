@@ -37,9 +37,9 @@
         </div>
 
         <div class="editor-grid">
-          <div class="panel panel-editor">
+            <div class="panel panel-editor">
             <div class="panel-header panel-header-editor">
-              <span>Markdown</span>
+              <span>Редактор текста</span>
             </div>
             <div class="editor-toolbar" id="editor-toolbar">
               <div class="fmt-group">
@@ -68,7 +68,7 @@
               </div>
               <div class="fmt-separator"></div>
               <div class="fmt-group">
-                <button type="button" class="fmt-btn fmt-btn-icon" id="image-upload-btn" data-action="image" title="Изображение">🖼</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" id="image-upload-btn" data-action="image" title="Изображение">📷</button>
                 <button type="button" class="fmt-btn fmt-btn-icon" id="video-upload-btn" data-action="video" title="Видео">🎬</button>
                 <button type="button" class="fmt-btn fmt-btn-icon" id="audio-upload-btn" data-action="audio" title="Аудио">🎵</button>
                 <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
@@ -94,13 +94,25 @@
               <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
             </div>
           </div>
-          <div class="panel">
-            <div class="panel-header">Превью Telegram</div>
-            <div class="panel-body">
+          <div class="panel panel-preview">
+            <div class="panel-header panel-header-preview">
+              <span>Превью Telegram</span>
+              <span class="panel-header-note">можно редактировать</span>
+            </div>
+            <div class="panel-body panel-body-preview">
               <div class="tg-preview-wrap">
+                <div class="tg-channel-label">Публикация в канал</div>
                 <div class="tg-channel-name" id="channel-name">@channel</div>
-                <div id="preview-content">
-                  <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
+                <div class="tg-preview-bubble">
+                  <div id="preview-content">
+                    <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
+                  </div>
+                  <textarea
+                    id="post-content-preview"
+                    class="tg-preview-textarea"
+                    placeholder="Текст поста в канале…"
+                    spellcheck="true"
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -114,7 +126,7 @@
         </div>
 
         <p class="markdown-hint">
-          Медиа: 🖼 🎬 🎵. Цитата ❝, сворачиваемый блок ▼. Списки, таблицы, форматирование текста.
+          Медиа: 📷 🎬 🎵. Цитата ❝, сворачиваемый блок ▼. Списки, таблицы, форматирование текста.
         </p>
       </div>
 

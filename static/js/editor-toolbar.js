@@ -5,6 +5,10 @@
   const HEADER_RE = /^(#{1,3})\s+(.*)$/;
 
   function getTextarea() {
+    const preview = document.getElementById("post-content-preview");
+    if (preview && !preview.readOnly && document.activeElement === preview) {
+      return preview;
+    }
     return document.getElementById("post-content");
   }
 
@@ -380,6 +384,8 @@
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     });
+    const preview = document.getElementById("post-content-preview");
+    if (preview) preview.readOnly = !enabled;
   }
 
   function handleToolbarClick(e) {

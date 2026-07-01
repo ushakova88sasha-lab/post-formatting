@@ -1,6 +1,22 @@
 let currentPostId = null;
 let posts = [];
 let previewTimer = null;
+let syncingEditors = false;
+
+function getMainEditor() {
+  return document.getElementById("post-content");
+}
+
+function getPreviewEditor() {
+  return document.getElementById("post-content-preview");
+}
+
+function syncEditors(source, target) {
+  if (!source || !target || syncingEditors) return;
+  syncingEditors = true;
+  target.value = source.value;
+  syncingEditors = false;
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -99,7 +115,9 @@ async function selectPost(id) {
 
   currentPostId = post.id;
   document.getElementById("post-title").value = post.title || "";
-  document.getElementById("post-content").value = post.content || "";
+  const content = post.content || "";
+  getMainEditor().value = content;
+  getPreviewEditor().value = content;
 
   if (post.scheduled_at) {
     const d = new Date(post.scheduled_at);
@@ -109,7 +127,8 @@ async function selectPost(id) {
   }
 
   const isPublished = post.status === "published";
-  document.getElementById("post-content").readOnly = isPublished;
+  getMainEditor().readOnly = isPublished;
+  getPreviewEditor().readOnly = isPublished;
   document.getElementById("post-title").readOnly = isPublished;
   document.getElementById("publish-btn").disabled = isPublished;
   document.getElementById("schedule-btn").disabled = isPublished;
@@ -129,7 +148,7 @@ function toLocalDatetime(date) {
 }
 
 async function updatePreview() {
-  const content = document.getElementById("post-content").value;
+  const content = getMainEditor().value;
   try {
     const data = await api("/api/posts/preview", {
       method: "POST",
@@ -142,6 +161,23 @@ async function updatePreview() {
     document.getElementById("preview-content").innerHTML =
       '<div class="tg-message"><p class="empty">Ошибка превью</p></div>';
   }
+}
+
+function schedulePreviewUpdate() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 300);
+}
+
+function onEditorInput(source) {
+  if (syncingEditors) return;
+  const main = getMainEditor();
+  const preview = getPreviewEditor();
+  if (source === preview) {
+    syncEditors(preview, main);
+  } else {
+    syncEditors(main, preview);
+  }
+  schedulePreviewUpdate();
 }
 
 async function createPost() {
@@ -157,7 +193,7 @@ async function createPost() {
 async function savePost() {
   if (!currentPostId) return;
   const title = document.getElementById("post-title").value;
-  const content = document.getElementById("post-content").value;
+  const content = getMainEditor().value;
 
   await api(`/api/posts/${currentPostId}`, {
     method: "PUT",
@@ -217,8 +253,8 @@ async function init() {
     document.getElementById("username-label").textContent = me.username;
 
     const health = await fetch("/health").then((r) => r.json());
-    if (health.bot_username) {
-      document.getElementById("channel-name").textContent = "Канал (настроен в .env)";
+    if (health.channel) {
+      document.getElementById("channel-name").textContent = health.channel;
     }
 
     await loadPosts();
@@ -230,10 +266,8 @@ async function init() {
   }
 }
 
-document.getElementById("post-content").addEventListener("input", () => {
-  clearTimeout(previewTimer);
-  previewTimer = setTimeout(updatePreview, 300);
-});
+getMainEditor().addEventListener("input", () => onEditorInput(getMainEditor()));
+getPreviewEditor().addEventListener("input", () => onEditorInput(getPreviewEditor()));
 
 document.getElementById("new-post-btn").addEventListener("click", createPost);
 document.getElementById("empty-new-btn").addEventListener("click", createPost);

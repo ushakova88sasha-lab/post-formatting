@@ -344,6 +344,19 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-header-note {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 .panel-body {
@@ -451,11 +464,62 @@ select {
   min-height: 360px;
 }
 
+.tg-channel-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6d7f93;
+  margin-bottom: 0.25rem;
+}
+
 .tg-channel-name {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--accent);
-  margin-bottom: 0.75rem;
+  color: #6ab2f2;
+  margin-bottom: 0.85rem;
+}
+
+.tg-preview-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.tg-preview-bubble #preview-content .tg-message {
+  margin: 0;
+}
+
+.tg-preview-textarea {
+  width: 100%;
+  min-height: 140px;
+  background: #182533;
+  border: 1px solid #2b3c4f;
+  border-radius: 0 12px 12px 12px;
+  color: #e8eaef;
+  padding: 0.75rem 1rem;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.tg-preview-textarea::placeholder {
+  color: #6d7f93;
+}
+
+.tg-preview-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(42, 171, 238, 0.15);
+}
+
+.tg-preview-textarea:read-only {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.panel-body-preview {
+  padding: 0.65rem;
 }
 
 .tg-message {
