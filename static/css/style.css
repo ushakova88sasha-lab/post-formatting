@@ -828,6 +828,7 @@ select {
 
 .schedule-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   margin-top: 1rem;
@@ -849,6 +850,13 @@ select {
   border-radius: 8px;
   color: var(--text);
   padding: 0.5rem 0.75rem;
+}
+
+.schedule-hint {
+  flex-basis: 100%;
+  margin: -0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .markdown-hint {

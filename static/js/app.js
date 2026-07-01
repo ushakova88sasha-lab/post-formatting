@@ -27,46 +27,8 @@ function statusBadge(status) {
   return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
 }
 
-const MOSCOW_TZ = "Europe/Moscow";
-
-function parseUtcDate(iso) {
-  if (!iso) return null;
-  const normalized = /[zZ]|[+-]\d{2}:\d{2}$/.test(iso) ? iso : `${iso}Z`;
-  return new Date(normalized);
-}
-
 function formatDate(iso) {
-  const date = parseUtcDate(iso);
-  if (!date || Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: MOSCOW_TZ,
-  });
-}
-
-function toMoscowDatetimeLocal(date) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: MOSCOW_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-  const get = (type) => parts.find((part) => part.type === type)?.value || "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
-
-function moscowDatetimeLocalToUtcIso(value) {
-  const [datePart, timePart] = value.split("T");
-  const [year, month, day] = datePart.split("-").map(Number);
-  const [hour, minute] = timePart.split(":").map(Number);
-  const utcMs = Date.UTC(year, month - 1, day, hour - 3, minute);
-  return new Date(utcMs).toISOString();
+  return window.moscowTime.formatMoscowDateTime(iso);
 }
 
 function postListTitle(post) {
@@ -249,8 +211,10 @@ async function selectPost(id) {
   document.getElementById("post-content").value = post.content || "";
 
   if (post.scheduled_at) {
-    const d = parseUtcDate(post.scheduled_at);
-    document.getElementById("schedule-at").value = d ? toMoscowDatetimeLocal(d) : "";
+    const d = window.moscowTime.parseUtcDate(post.scheduled_at);
+    document.getElementById("schedule-at").value = d
+      ? window.moscowTime.toMoscowDatetimeLocal(d)
+      : "";
   } else {
     document.getElementById("schedule-at").value = "";
   }
@@ -343,7 +307,7 @@ async function schedulePost() {
     return;
   }
 
-  const scheduled_at = moscowDatetimeLocalToUtcIso(value);
+  const scheduled_at = window.moscowTime.moscowDatetimeLocalToUtcIso(value);
 
   try {
     await savePost();
