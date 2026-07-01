@@ -440,6 +440,10 @@ select {
   color: inherit;
 }
 
+.fmt-btn[data-action="italic"] i {
+  font-style: italic;
+}
+
 .fmt-btn:hover:not(:disabled) {
   background: var(--border);
   color: var(--text);
