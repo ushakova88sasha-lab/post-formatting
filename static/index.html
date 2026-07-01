@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=8">
+  <link rel="stylesheet" href="/static/css/style.css?v=9">
 </head>
 <body>
   <header class="header">
@@ -98,6 +98,22 @@
                 <button type="button" class="fmt-btn fmt-btn-icon" data-action="link" title="Ссылка">🔗</button>
               </div>
               <div class="fmt-separator"></div>
+              <div class="fmt-group fmt-emoji-wrap">
+                <button
+                  type="button"
+                  class="fmt-btn fmt-btn-icon"
+                  id="emoji-picker-btn"
+                  title="Эмодзи"
+                  aria-label="Вставить эмодзи"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                >😀</button>
+                <div id="emoji-picker-popover" class="emoji-picker hidden" role="dialog" aria-label="Выбор эмодзи">
+                  <div class="emoji-picker-tabs" id="emoji-picker-tabs"></div>
+                  <div class="emoji-picker-grid" id="emoji-picker-grid"></div>
+                </div>
+              </div>
+              <div class="fmt-separator"></div>
               <div class="fmt-group">
                 <button type="button" class="fmt-btn fmt-btn-icon" id="image-upload-btn" data-action="image" title="Изображение">📷</button>
                 <button type="button" class="fmt-btn fmt-btn-icon" id="video-upload-btn" data-action="video" title="Видео">🎬</button>
@@ -147,7 +163,7 @@
         </div>
 
         <p class="markdown-hint">
-          Медиа: 📷 🎬 🎵. Маркер <mark class="fmt-marker-icon">М</mark>, по центру ≡, цитата ❝, блок ▼. Списки и таблицы.
+          Медиа: 📷 🎬 🎵. Эмодзи 😀. Маркер <mark class="fmt-marker-icon">М</mark>, по центру ≡, цитата ❝, блок ▼. Списки и таблицы.
         </p>
       </div>
 
@@ -187,9 +203,10 @@
 
   <script src="/static/js/auth-utils.js?v=5"></script>
   <script src="/static/js/modals.js?v=5"></script>
-  <script src="/static/js/editor-toolbar.js?v=8"></script>
+  <script src="/static/js/editor-toolbar.js?v=9"></script>
   <script src="/static/js/time-moscow.js?v=5"></script>
-  <script src="/static/js/preview-editor.js?v=1"></script>
+  <script src="/static/js/preview-editor.js?v=2"></script>
+  <script src="/static/js/emoji-picker.js?v=1"></script>
   <script src="/static/js/app.js?v=8"></script>
 </body>
 </html>

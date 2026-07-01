@@ -431,6 +431,9 @@
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     });
+    if (!enabled) {
+      window.emojiPicker?.close();
+    }
   }
 
   function handleToolbarClick(e) {

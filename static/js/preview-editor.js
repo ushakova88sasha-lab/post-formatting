@@ -10,6 +10,20 @@
   let dirty = false;
   let focused = false;
   let syncTimer = null;
+  let savedPreviewRange = null;
+
+  function savePreviewSelection() {
+    const messageEl = getMessage();
+    if (!messageEl) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const range = sel.getRangeAt(0);
+    if (messageEl.contains(range.commonAncestorContainer)) {
+      savedPreviewRange = range.cloneRange();
+    }
+  }
 
   function getRoot() {
     return document.getElementById(PREVIEW_ROOT_ID);
@@ -289,10 +303,14 @@
 
     messageEl.addEventListener("blur", () => {
       focused = false;
+      savePreviewSelection();
       syncToTextarea();
       dirty = false;
       window.dispatchEvent(new CustomEvent("preview-editor:blur"));
     });
+
+    messageEl.addEventListener("keyup", savePreviewSelection);
+    messageEl.addEventListener("mouseup", savePreviewSelection);
 
     messageEl.addEventListener("input", () => {
       if (!editable) return;
@@ -350,6 +368,52 @@
     editable = Boolean(enabled);
     const message = getMessage();
     applyEditableState(message);
+    if (!enabled) {
+      savedPreviewRange = null;
+    }
+  }
+
+  function insertText(text) {
+    const messageEl = getMessage();
+    const textarea = getTextarea();
+    if (!messageEl || !editable || !text) {
+      return false;
+    }
+
+    if (textarea && document.activeElement === textarea) {
+      return false;
+    }
+
+    if (savedPreviewRange) {
+      messageEl.focus();
+      clearEmptyPlaceholder(messageEl);
+
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedPreviewRange);
+        document.execCommand("insertText", false, text);
+        if (sel.rangeCount) {
+          savedPreviewRange = sel.getRangeAt(0).cloneRange();
+        }
+      }
+
+      dirty = true;
+      syncToTextarea();
+      return true;
+    }
+
+    if (focused || messageEl === document.activeElement) {
+      messageEl.focus();
+      clearEmptyPlaceholder(messageEl);
+      document.execCommand("insertText", false, text);
+      savePreviewSelection();
+      dirty = true;
+      syncToTextarea();
+      return true;
+    }
+
+    return false;
   }
 
   function init() {
@@ -358,12 +422,18 @@
 
     bindMessage(getMessage());
 
+    const textarea = getTextarea();
+    textarea?.addEventListener("focus", () => {
+      savedPreviewRange = null;
+    });
+
     window.previewEditor = {
       isEditing,
       isDirty,
       syncToTextarea,
       setHtml,
       setEditable,
+      insertText,
       messageToMarkdown,
     };
   }
