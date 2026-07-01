@@ -5,10 +5,6 @@
   const HEADER_RE = /^(#{1,3})\s+(.*)$/;
 
   function getTextarea() {
-    const preview = document.getElementById("post-content-preview");
-    if (preview && !preview.readOnly && document.activeElement === preview) {
-      return preview;
-    }
     return document.getElementById("post-content");
   }
 
@@ -70,9 +66,19 @@
     applyLinesTransform((line) => prefix + stripListMarker(line));
   }
 
-  function insertTable() {
-    let cols = parseInt(window.prompt("Количество столбцов:", "2"), 10) || 2;
-    let rows = parseInt(window.prompt("Количество строк (без шапки):", "2"), 10) || 2;
+  async function insertTable() {
+    const values = await window.appModal.form({
+      title: "Вставить таблицу",
+      fields: [
+        { label: "Количество столбцов", value: "2", inputMode: "numeric" },
+        { label: "Количество строк (без шапки)", value: "2", inputMode: "numeric" },
+      ],
+      confirmText: "Вставить",
+    });
+    if (!values) return;
+
+    let cols = parseInt(values[0], 10) || 2;
+    let rows = parseInt(values[1], 10) || 2;
     cols = Math.min(Math.max(cols, 1), 5);
     rows = Math.min(Math.max(rows, 1), 10);
 
@@ -182,7 +188,7 @@
     });
   }
 
-  function insertDetails() {
+  async function insertDetails() {
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
@@ -190,17 +196,29 @@
     const end = textarea.selectionEnd;
     const selected = textarea.value.substring(start, end);
 
-    const summary = window.prompt("Заголовок скрывающегося блока:", "Подробнее") ?? "Подробнее";
+    const summary = await window.appModal.prompt({
+      title: "Скрывающийся блок",
+      label: "Заголовок блока",
+      value: "Подробнее",
+      confirmText: "Вставить",
+    });
+    if (summary === null) return;
+
     const content = selected || "Скрытый текст…";
     const block = `<details><summary>${summary.trim()}</summary>\n${content}\n</details>`;
     insertBlockAtCursor(block);
   }
 
-  function insertLink() {
+  async function insertLink() {
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
-    const url = window.prompt("URL ссылки:", "https://t.me/dnative");
+    const url = await window.appModal.prompt({
+      title: "Ссылка",
+      label: "URL",
+      value: "https://t.me/dnative",
+      confirmText: "Вставить",
+    });
     if (!url) return;
 
     const start = textarea.selectionStart;
@@ -357,7 +375,10 @@
 
       insertBlockAtCursor(buildMediaMarkdown(data.url, caption));
     } catch (err) {
-      window.alert(err.message || "Не удалось загрузить файл");
+      await window.appModal.alert({
+        title: "Ошибка загрузки",
+        message: err.message || "Не удалось загрузить файл",
+      });
     } finally {
       btn.classList.remove("fmt-btn-loading");
       btn.textContent = origText;
@@ -384,8 +405,6 @@
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     });
-    const preview = document.getElementById("post-content-preview");
-    if (preview) preview.readOnly = !enabled;
   }
 
   function handleToolbarClick(e) {

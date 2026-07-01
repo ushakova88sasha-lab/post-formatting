@@ -39,7 +39,7 @@
         <div class="editor-grid">
             <div class="panel panel-editor">
             <div class="panel-header panel-header-editor">
-              <span>Редактор текста</span>
+              <span>Редактор поста</span>
             </div>
             <div class="editor-toolbar" id="editor-toolbar">
               <div class="fmt-group">
@@ -95,24 +95,12 @@
             </div>
           </div>
           <div class="panel panel-preview">
-            <div class="panel-header panel-header-preview">
-              <span>Превью Telegram</span>
-              <span class="panel-header-note">можно редактировать</span>
-            </div>
+            <div class="panel-header">Превью Telegram</div>
             <div class="panel-body panel-body-preview">
               <div class="tg-preview-wrap">
-                <div class="tg-channel-label">Публикация в канал</div>
-                <div class="tg-channel-name" id="channel-name">@channel</div>
-                <div class="tg-preview-bubble">
-                  <div id="preview-content">
-                    <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
-                  </div>
-                  <textarea
-                    id="post-content-preview"
-                    class="tg-preview-textarea"
-                    placeholder="Текст поста в канале…"
-                    spellcheck="true"
-                  ></textarea>
+                <div class="tg-channel-name" id="channel-label">Публикация в канал</div>
+                <div id="preview-content">
+                  <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
                 </div>
               </div>
             </div>
@@ -137,6 +125,18 @@
     </main>
   </div>
 
+  <div id="app-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card app-modal-card">
+      <h3 id="app-modal-title"></h3>
+      <p id="app-modal-message" class="app-modal-message hidden"></p>
+      <div id="app-modal-fields"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="app-modal-cancel">Отмена</button>
+        <button type="button" class="btn btn-primary" id="app-modal-confirm">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div id="media-insert-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="media-insert-title" aria-modal="true">
     <div class="modal-card media-insert-card">
       <h3 id="media-insert-title">Добавить в пост</h3>
@@ -152,6 +152,7 @@
     </div>
   </div>
 
+  <script src="/static/js/modals.js"></script>
   <script src="/static/js/editor-toolbar.js"></script>
   <script src="/static/js/app.js"></script>
 </body>

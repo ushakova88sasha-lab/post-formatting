@@ -1,22 +1,6 @@
 let currentPostId = null;
 let posts = [];
 let previewTimer = null;
-let syncingEditors = false;
-
-function getMainEditor() {
-  return document.getElementById("post-content");
-}
-
-function getPreviewEditor() {
-  return document.getElementById("post-content-preview");
-}
-
-function syncEditors(source, target) {
-  if (!source || !target || syncingEditors) return;
-  syncingEditors = true;
-  target.value = source.value;
-  syncingEditors = false;
-}
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -104,6 +88,12 @@ function showEditor(show) {
   document.getElementById("empty-view").classList.toggle("hidden", show);
 }
 
+function setChannelLabel(channel) {
+  const label = document.getElementById("channel-label");
+  if (!label) return;
+  label.textContent = channel ? `Публикация в канал ${channel}` : "Публикация в канал";
+}
+
 async function loadPosts() {
   posts = await api("/api/posts");
   renderPostList();
@@ -115,9 +105,7 @@ async function selectPost(id) {
 
   currentPostId = post.id;
   document.getElementById("post-title").value = post.title || "";
-  const content = post.content || "";
-  getMainEditor().value = content;
-  getPreviewEditor().value = content;
+  document.getElementById("post-content").value = post.content || "";
 
   if (post.scheduled_at) {
     const d = new Date(post.scheduled_at);
@@ -127,8 +115,7 @@ async function selectPost(id) {
   }
 
   const isPublished = post.status === "published";
-  getMainEditor().readOnly = isPublished;
-  getPreviewEditor().readOnly = isPublished;
+  document.getElementById("post-content").readOnly = isPublished;
   document.getElementById("post-title").readOnly = isPublished;
   document.getElementById("publish-btn").disabled = isPublished;
   document.getElementById("schedule-btn").disabled = isPublished;
@@ -148,7 +135,7 @@ function toLocalDatetime(date) {
 }
 
 async function updatePreview() {
-  const content = getMainEditor().value;
+  const content = document.getElementById("post-content").value;
   try {
     const data = await api("/api/posts/preview", {
       method: "POST",
@@ -161,23 +148,6 @@ async function updatePreview() {
     document.getElementById("preview-content").innerHTML =
       '<div class="tg-message"><p class="empty">Ошибка превью</p></div>';
   }
-}
-
-function schedulePreviewUpdate() {
-  clearTimeout(previewTimer);
-  previewTimer = setTimeout(updatePreview, 300);
-}
-
-function onEditorInput(source) {
-  if (syncingEditors) return;
-  const main = getMainEditor();
-  const preview = getPreviewEditor();
-  if (source === preview) {
-    syncEditors(preview, main);
-  } else {
-    syncEditors(main, preview);
-  }
-  schedulePreviewUpdate();
 }
 
 async function createPost() {
@@ -193,7 +163,7 @@ async function createPost() {
 async function savePost() {
   if (!currentPostId) return;
   const title = document.getElementById("post-title").value;
-  const content = getMainEditor().value;
+  const content = document.getElementById("post-content").value;
 
   await api(`/api/posts/${currentPostId}`, {
     method: "PUT",
@@ -206,7 +176,12 @@ async function savePost() {
 
 async function publishPost() {
   if (!currentPostId) return;
-  if (!confirm("Опубликовать пост в Telegram сейчас?")) return;
+  const confirmed = await window.appModal.confirm({
+    title: "Публикация",
+    message: "Опубликовать пост в Telegram сейчас?",
+    confirmText: "Опубликовать",
+  });
+  if (!confirmed) return;
 
   try {
     await savePost();
@@ -253,9 +228,7 @@ async function init() {
     document.getElementById("username-label").textContent = me.username;
 
     const health = await fetch("/health").then((r) => r.json());
-    if (health.channel) {
-      document.getElementById("channel-name").textContent = health.channel;
-    }
+    setChannelLabel(health.channel);
 
     await loadPosts();
     if (posts.length) {
@@ -266,8 +239,10 @@ async function init() {
   }
 }
 
-getMainEditor().addEventListener("input", () => onEditorInput(getMainEditor()));
-getPreviewEditor().addEventListener("input", () => onEditorInput(getPreviewEditor()));
+document.getElementById("post-content").addEventListener("input", () => {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 300);
+});
 
 document.getElementById("new-post-btn").addEventListener("click", createPost);
 document.getElementById("empty-new-btn").addEventListener("click", createPost);
