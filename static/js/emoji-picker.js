@@ -2,83 +2,11 @@
  * Панель выбора эмодзи для редактора постов.
  */
 (function () {
-  const CATEGORIES = [
-    {
-      id: "smileys",
-      label: "😀",
-      title: "Смайлы",
-      emojis: [
-        "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂", "😉", "😍",
-        "🥰", "😘", "😎", "🤔", "😮", "😢", "😭", "😡", "🥳", "😴", "🤯", "🫡",
-      ],
-    },
-    {
-      id: "gestures",
-      label: "👍",
-      title: "Жесты",
-      emojis: [
-        "👍", "👎", "👌", "✌️", "🤝", "👏", "🙌", "🙏", "💪", "👋", "🤞", "✊",
-        "👊", "🫶", "🤙", "☝️", "👆", "👇", "👉", "👈", "✋", "🖐️", "🤷", "🙋",
-      ],
-    },
-    {
-      id: "hearts",
-      label: "❤️",
-      title: "Сердца",
-      emojis: [
-        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕",
-        "💞", "💓", "💗", "💖", "💘", "💝", "♥️", "😍", "😘", "💑", "💏", "🥰",
-      ],
-    },
-    {
-      id: "symbols",
-      label: "✨",
-      title: "Символы",
-      emojis: [
-        "✨", "⭐", "🌟", "💫", "🔥", "💯", "✅", "❌", "⚡️", "💡", "📌", "🎯",
-        "🏆", "🎉", "🎊", "🎁", "🔔", "📣", "💬", "💭", "🗣️", "‼️", "❓", "❗️",
-      ],
-    },
-    {
-      id: "nature",
-      label: "🌸",
-      title: "Природа",
-      emojis: [
-        "☀️", "🌤️", "⛅️", "🌙", "⭐️", "🌈", "🌸", "🌺", "🌻", "🌹", "🍀", "🌿",
-        "🌳", "🌊", "❄️", "⛄️", "🐶", "🐱", "🦊", "🐻", "🦁", "🐸", "🦋", "🐝",
-      ],
-    },
-    {
-      id: "food",
-      label: "☕️",
-      title: "Еда",
-      emojis: [
-        "☕️", "🍵", "🧃", "🍺", "🥂", "🍷", "🍕", "🍔", "🌭", "🍟", "🥗", "🍣",
-        "🍰", "🎂", "🍪", "🍫", "🍎", "🍇", "🍓", "🥑", "🌶️", "🧀", "🥐", "🍳",
-      ],
-    },
-    {
-      id: "work",
-      label: "💼",
-      title: "Дела",
-      emojis: [
-        "💼", "📱", "💻", "🖥️", "⌨️", "📝", "📊", "📈", "📉", "📅", "⏰", "🔒",
-        "🔑", "🛠️", "⚙️", "🔗", "📎", "📁", "📂", "✉️", "📩", "📰", "🧾", "🏠",
-      ],
-    },
-    {
-      id: "travel",
-      label: "✈️",
-      title: "Путешествия",
-      emojis: [
-        "✈️", "🚀", "🚗", "🚕", "🚌", "🚎", "🏎️", "🚲", "🛵", "🚂", "🛳️", "⛵️",
-        "🗺️", "🧳", "🏖️", "🏔️", "🏕️", "🌍", "🌎", "🌏", "🏙️", "🗽", "🎡", "🎢",
-      ],
-    },
-  ];
+  const CATEGORIES = window.EMOJI_CATEGORIES || [];
 
   let open = false;
-  let activeCategory = CATEGORIES[0].id;
+  let activeCategory = CATEGORIES[0]?.id || "smileys";
+  let searchQuery = "";
 
   function getPopover() {
     return document.getElementById("emoji-picker-popover");
@@ -86,6 +14,14 @@
 
   function getButton() {
     return document.getElementById("emoji-picker-btn");
+  }
+
+  function getSearchInput() {
+    return document.getElementById("emoji-picker-search");
+  }
+
+  function emojiChar(item) {
+    return typeof item === "string" ? item : item.e;
   }
 
   function insertIntoEditor(text) {
@@ -109,14 +45,39 @@
     window.refreshPreview?.();
   }
 
-  function renderGrid(categoryId) {
+  function collectSearchResults(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const results = [];
+    const seen = new Set();
+
+    for (const cat of CATEGORIES) {
+      for (const item of cat.emojis) {
+        const char = emojiChar(item);
+        if (seen.has(char)) continue;
+
+        const keywords = typeof item === "string" ? "" : item.q || "";
+        if (char.includes(q) || keywords.includes(q)) {
+          seen.add(char);
+          results.push(char);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  function renderEmojiGrid(emojis) {
     const grid = document.getElementById("emoji-picker-grid");
     if (!grid) return;
 
-    const category = CATEGORIES.find((c) => c.id === categoryId) || CATEGORIES[0];
-    activeCategory = category.id;
+    if (!emojis.length) {
+      grid.innerHTML = '<p class="emoji-picker-empty">Ничего не найдено</p>';
+      return;
+    }
 
-    grid.innerHTML = category.emojis
+    grid.innerHTML = emojis
       .map(
         (emoji) =>
           `<button type="button" class="emoji-picker-item" data-emoji="${emoji}" title="${emoji}">${emoji}</button>`
@@ -132,19 +93,40 @@
     });
   }
 
+  function renderGrid(categoryId) {
+    if (searchQuery.trim()) {
+      renderEmojiGrid(collectSearchResults(searchQuery));
+      return;
+    }
+
+    const category = CATEGORIES.find((c) => c.id === categoryId) || CATEGORIES[0];
+    if (!category) return;
+
+    activeCategory = category.id;
+    renderEmojiGrid(category.emojis.map(emojiChar));
+  }
+
   function renderTabs() {
     const tabs = document.getElementById("emoji-picker-tabs");
     if (!tabs) return;
 
+    const showSearchActive = Boolean(searchQuery.trim());
+
     tabs.innerHTML = CATEGORIES.map(
       (cat) =>
-        `<button type="button" class="emoji-picker-tab ${cat.id === activeCategory ? "active" : ""}" data-category="${cat.id}" title="${cat.title}">${cat.label}</button>`
+        `<button type="button" class="emoji-picker-tab ${!showSearchActive && cat.id === activeCategory ? "active" : ""}" data-category="${cat.id}" title="${cat.title}">${cat.label}</button>`
     ).join("");
 
     tabs.querySelectorAll(".emoji-picker-tab").forEach((tab) => {
       tab.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        const input = getSearchInput();
+        if (input) {
+          input.value = "";
+        }
+        searchQuery = "";
         activeCategory = tab.dataset.category;
         tabs.querySelectorAll(".emoji-picker-tab").forEach((t) => {
           t.classList.toggle("active", t.dataset.category === activeCategory);
@@ -191,7 +173,13 @@
   function show() {
     const popover = getPopover();
     const btn = getButton();
-    if (!popover || !btn || btn.disabled) return;
+    if (!popover || !btn || btn.disabled || !CATEGORIES.length) return;
+
+    searchQuery = "";
+    const input = getSearchInput();
+    if (input) {
+      input.value = "";
+    }
 
     renderTabs();
     renderGrid(activeCategory);
@@ -209,6 +197,7 @@
 
     popover.classList.add("hidden");
     open = false;
+    searchQuery = "";
     btn?.classList.remove("active");
     btn?.setAttribute("aria-expanded", "false");
   }
@@ -233,6 +222,22 @@
       e.stopPropagation();
       toggle();
     });
+
+    const searchInput = getSearchInput();
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        searchQuery = searchInput.value;
+        renderTabs();
+        renderGrid(activeCategory);
+        if (open) {
+          positionPopover();
+        }
+      });
+
+      searchInput.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
 
     document.addEventListener("click", (e) => {
       if (!open) return;

@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=10">
+  <link rel="stylesheet" href="/static/css/style.css?v=11">
 </head>
 <body>
   <header class="header">
@@ -109,6 +109,14 @@
                   aria-haspopup="dialog"
                 >😀</button>
                 <div id="emoji-picker-popover" class="emoji-picker hidden" role="dialog" aria-label="Выбор эмодзи">
+                  <input
+                    type="search"
+                    id="emoji-picker-search"
+                    class="emoji-picker-search"
+                    placeholder="Поиск: fire, heart, россия…"
+                    autocomplete="off"
+                    spellcheck="false"
+                  >
                   <div class="emoji-picker-tabs" id="emoji-picker-tabs"></div>
                   <div class="emoji-picker-grid" id="emoji-picker-grid"></div>
                 </div>
@@ -206,7 +214,8 @@
   <script src="/static/js/editor-toolbar.js?v=9"></script>
   <script src="/static/js/time-moscow.js?v=5"></script>
   <script src="/static/js/preview-editor.js?v=2"></script>
-  <script src="/static/js/emoji-picker.js?v=2"></script>
+  <script src="/static/js/emoji-data.js?v=1"></script>
+  <script src="/static/js/emoji-picker.js?v=3"></script>
   <script src="/static/js/app.js?v=8"></script>
 </body>
 </html>
