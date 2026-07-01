@@ -114,6 +114,9 @@ async function selectPost(id) {
   document.getElementById("publish-btn").disabled = isPublished;
   document.getElementById("schedule-btn").disabled = isPublished;
   document.getElementById("save-btn").disabled = isPublished;
+  if (window.editorToolbar) {
+    window.editorToolbar.setToolbarEnabled(!isPublished);
+  }
 
   showEditor(true);
   renderPostList();

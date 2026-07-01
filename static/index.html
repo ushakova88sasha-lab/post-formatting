@@ -37,8 +37,23 @@
         </div>
 
         <div class="editor-grid">
-          <div class="panel">
-            <div class="panel-header">Текст (Markdown)</div>
+          <div class="panel panel-editor">
+            <div class="panel-header panel-header-editor">
+              <span>Markdown</span>
+            </div>
+            <div class="editor-toolbar" id="editor-toolbar">
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn" data-action="h1" title="Заголовок H1">H1</button>
+                <button type="button" class="fmt-btn" data-action="h2" title="Заголовок H2">H2</button>
+                <button type="button" class="fmt-btn" data-action="h3" title="Заголовок H3">H3</button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="bold" title="Жирный"><b>B</b></button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="italic" title="Курсив"><i>I</i></button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="strike" title="Зачёркнутый"><s>S</s></button>
+              </div>
+            </div>
             <div class="panel-body">
               <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
             </div>
@@ -63,9 +78,8 @@
         </div>
 
         <p class="markdown-hint">
-          Поддерживается Markdown: <strong>**жирный**</strong>, <em>*курсив*</em>, <code>`код`</code>,
-          <code>```блок кода```</code>, [ссылки](url), ~~зачёркнутый~~.
-          Время планирования — ваше локальное, на сервер уходит в UTC.
+          Панель форматирования: H1–H3, жирный, курсив, зачёркнутый. Выделите текст и нажмите кнопку
+          или примените заголовок к текущей строке.
         </p>
       </div>
 
@@ -76,6 +90,7 @@
     </main>
   </div>
 
+  <script src="/static/js/editor-toolbar.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>
