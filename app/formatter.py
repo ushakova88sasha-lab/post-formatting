@@ -9,6 +9,14 @@ MEDIA_RE = re.compile(
     re.IGNORECASE,
 )
 
+_CENTER_BLOCK_RE = re.compile(
+    r"<pullquote>(?P<content>[\s\S]*?)</pullquote>"
+    r'|<p style="text-align:\s*center">(?P<legacy>[\s\S]*?)</p>',
+    re.IGNORECASE,
+)
+
+_MARKDOWN_EXTENSIONS = ["fenced_code", "nl2br", "sane_lists", "tables"]
+
 CHECKLIST_LINE = re.compile(r"^- \[([ xX])\]\s+(.*)$")
 
 VIDEO_EXT = {".mp4", ".webm", ".mov"}
@@ -86,19 +94,54 @@ def _preprocess_rich_inline(text: str) -> str:
     return text
 
 
-def _markdown_to_html(text: str) -> str:
-    text = _preprocess_media(text)
-    text = _preprocess_checklists(text)
+def _render_markdown_chunk(text: str) -> str:
     text = _preprocess_rich_inline(text)
+    if not text.strip():
+        return ""
     return markdown.markdown(
         text,
-        extensions=["fenced_code", "nl2br", "sane_lists", "tables"],
+        extensions=_MARKDOWN_EXTENSIONS,
         output_format="html5",
     )
 
 
+def _render_center_block(content: str) -> str:
+    inner_html = _render_markdown_chunk(content.strip())
+    if not inner_html:
+        return "<pullquote></pullquote>"
+    if (
+        inner_html.startswith("<p>")
+        and inner_html.endswith("</p>")
+        and inner_html.count("<p>") == 1
+        and inner_html.count("</p>") == 1
+    ):
+        inner_html = inner_html[3:-4]
+    return f"<pullquote>{inner_html}</pullquote>"
+
+
+def _markdown_to_html(text: str) -> str:
+    text = _preprocess_media(text)
+    text = _preprocess_checklists(text)
+
+    parts: list[str] = []
+    last = 0
+    for match in _CENTER_BLOCK_RE.finditer(text):
+        if match.start() > last:
+            parts.append(_render_markdown_chunk(text[last : match.start()]))
+        content = match.group("content")
+        if content is None:
+            content = match.group("legacy") or ""
+        parts.append(_render_center_block(content))
+        last = match.end()
+
+    if last < len(text):
+        parts.append(_render_markdown_chunk(text[last:]))
+
+    return "".join(parts)
+
+
 ALLOWED_TAG_RE = re.compile(
-    r"<(/?)(?:figure|figcaption|img|video|audio|details|summary|blockquote|div|mark|span|br|"
+    r"<(/?)(?:figure|figcaption|img|video|audio|details|summary|blockquote|pullquote|cite|div|mark|span|br|"
     r"table|thead|tbody|tr|th|td|ul|ol|li|p|h[1-3]|b|i|u|s|sub|sup|code|pre|a)(?:\s[^>]*)?>",
     re.IGNORECASE,
 )

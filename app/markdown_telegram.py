@@ -1,6 +1,11 @@
 import re
 
 _FENCE_RE = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)")
+_CENTER_BLOCK_RE = re.compile(
+    r"<pullquote>[\s\S]*?</pullquote>"
+    r'|<p style="text-align:\s*center">[\s\S]*?</p>',
+    re.IGNORECASE,
+)
 _LIST_MARKER_RE = re.compile(r"^(\s*)([-+*]|\d+\.)\s")
 _CHECKLIST_RE = re.compile(r"^(\s*)- \[[ xX]\]\s")
 
@@ -43,7 +48,27 @@ def prepare_markdown_for_telegram(markdown: str) -> str:
     """Telegram Rich Markdown схлопывает одиночные переносы — сохраняем их через <br>."""
     text = markdown.replace("\r\n", "\n").replace("\r", "\n")
     chunks = _FENCE_RE.split(text)
-    return "".join(
-        chunk if chunk.startswith("```") or chunk.startswith("~~~") else _preserve_line_breaks(chunk)
-        for chunk in chunks
-    )
+    parts: list[str] = []
+    for chunk in chunks:
+        if chunk.startswith("```") or chunk.startswith("~~~"):
+            parts.append(chunk)
+            continue
+        parts.append(_preserve_with_center_blocks(chunk))
+    return "".join(parts)
+
+
+def _preserve_with_center_blocks(segment: str) -> str:
+    if not segment:
+        return segment
+
+    parts: list[str] = []
+    last = 0
+    for match in _CENTER_BLOCK_RE.finditer(segment):
+        if match.start() > last:
+            parts.append(_preserve_line_breaks(segment[last : match.start()]))
+        parts.append(_preserve_line_breaks(match.group(0)))
+        last = match.end()
+
+    if last < len(segment):
+        parts.append(_preserve_line_breaks(segment[last:]))
+    return "".join(parts)

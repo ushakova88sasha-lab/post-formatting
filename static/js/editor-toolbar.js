@@ -3,7 +3,8 @@
  */
 (function () {
   const HEADER_RE = /^(#{1,3})\s+(.*)$/;
-  const CENTER_BLOCK_RE = /^<p style="text-align:\s*center">([\s\S]*)<\/p>$/i;
+  const CENTER_BLOCK_RE =
+    /^(?:<pullquote>|<p style="text-align:\s*center">)([\s\S]*)(?:<\/pullquote>|<\/p>)$/i;
 
   function getTextarea() {
     return document.getElementById("post-content");
@@ -196,7 +197,7 @@
     const { value, start, end } = getLinesRange(textarea);
     const block = value.substring(start, end);
     const match = block.match(CENTER_BLOCK_RE);
-    const newBlock = match ? match[1] : `<p style="text-align: center">${block}</p>`;
+    const newBlock = match ? match[1] : `<pullquote>${block}</pullquote>`;
 
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
     textarea.setSelectionRange(start, start + newBlock.length);

@@ -578,9 +578,12 @@ select {
 }
 
 .tg-message p[style*="text-align: center"],
-.tg-message p.tg-center {
+.tg-message p.tg-center,
+.tg-message pullquote {
+  display: block;
   text-align: center;
   width: 100%;
+  margin: 0.45rem 0;
 }
 
 .tg-message .tg-spoiler {
