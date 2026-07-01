@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telegram Admin — Редактор постов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="header">
+    <h1>Telegram Admin</h1>
+    <div class="header-actions">
+      <span id="username-label"></span>
+      <button class="btn btn-secondary" id="logout-btn">Выйти</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Посты</h2>
+      <button class="btn btn-primary" id="new-post-btn" style="width:100%; margin-bottom: 0.75rem;">+ Новый пост</button>
+      <ul class="post-list" id="post-list"></ul>
+    </aside>
+
+    <main class="main">
+      <div id="alert" class="alert hidden"></div>
+
+      <div id="editor-view" class="hidden">
+        <div class="editor-header">
+          <input type="text" id="post-title" placeholder="Заголовок (только для себя, в Telegram не уходит)">
+          <div class="editor-actions">
+            <button class="btn btn-secondary" id="save-btn">Сохранить</button>
+            <button class="btn btn-primary" id="publish-btn">Опубликовать</button>
+          </div>
+        </div>
+
+        <div class="editor-grid">
+          <div class="panel panel-editor">
+            <div class="panel-header panel-header-editor">
+              <span>Markdown</span>
+            </div>
+            <div class="editor-toolbar" id="editor-toolbar">
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn" data-action="h1" title="Заголовок H1">H1</button>
+                <button type="button" class="fmt-btn" data-action="h2" title="Заголовок H2">H2</button>
+                <button type="button" class="fmt-btn" data-action="h3" title="Заголовок H3">H3</button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="bold" title="Жирный"><b>B</b></button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="italic" title="Курсив"><i>I</i></button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="strike" title="Зачёркнутый"><s>S</s></button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="underline" title="Подчёркнутый"><u>U</u></button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="marker" title="Выделение маркером">M</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="spoiler" title="Спойлер">👁</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="code" title="Моноширинный код">&lt;&gt;</button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="sub" title="Нижний индекс (H₂O)">X₂</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="math" title="Формула (e=mc²)">fx</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="link" title="Ссылка">🔗</button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" id="image-upload-btn" data-action="image" title="Изображение">🖼</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" id="video-upload-btn" data-action="video" title="Видео">🎬</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" id="audio-upload-btn" data-action="audio" title="Аудио">🎵</button>
+                <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+                <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" class="hidden">
+                <input type="file" id="audio-file-input" accept="audio/mpeg,audio/ogg,audio/wav,.mp3,.ogg,.wav" class="hidden">
+              </div>
+            </div>
+            <div class="editor-toolbar editor-toolbar-row2" id="editor-toolbar-blocks">
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="ulist" title="Маркированный список">•</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="olist" title="Нумерованный список">1.</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="check-open" title="Чек-лист (не выполнено)">☐</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="check-done" title="Чек-лист (выполнено)">☑</button>
+              </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn" data-action="table" title="Вставить таблицу">⊞ Таблица</button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="quote" title="Цитата">❝</button>
+                <button type="button" class="fmt-btn" data-action="details" title="Скрывающийся блок">▼ Скрыть</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">Превью Telegram</div>
+            <div class="panel-body">
+              <div class="tg-preview-wrap">
+                <div class="tg-channel-name" id="channel-name">@channel</div>
+                <div id="preview-content">
+                  <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="schedule-row">
+          <label for="schedule-at">Запланировать:</label>
+          <input type="datetime-local" id="schedule-at">
+          <button class="btn btn-secondary" id="schedule-btn">Запланировать</button>
+        </div>
+
+        <p class="markdown-hint">
+          Медиа: 🖼 🎬 🎵. Цитата ❝, сворачиваемый блок ▼. Списки, таблицы, форматирование текста.
+        </p>
+      </div>
+
+      <div id="empty-view" class="empty-state">
+        <p>Выберите пост из списка или создайте новый</p>
+        <button class="btn btn-primary" id="empty-new-btn">+ Новый пост</button>
+      </div>
+    </main>
+  </div>
+
+  <div id="media-insert-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="media-insert-title" aria-modal="true">
+    <div class="modal-card media-insert-card">
+      <h3 id="media-insert-title">Добавить в пост</h3>
+      <div class="media-insert-preview" id="media-insert-preview"></div>
+      <div class="form-group media-insert-caption-group">
+        <label for="media-insert-caption">Подпись (необязательно)</label>
+        <input type="text" id="media-insert-caption" class="input" placeholder="Текст под медиа" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="media-insert-cancel">Отмена</button>
+        <button type="button" class="btn btn-primary" id="media-insert-confirm">Вставить в пост</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/editor-toolbar.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
