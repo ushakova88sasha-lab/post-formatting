@@ -1,7 +1,6 @@
 import httpx
 
 from app.config import settings
-from app.formatter import markdown_to_telegram_html
 
 
 class TelegramError(Exception):
@@ -11,17 +10,17 @@ class TelegramError(Exception):
 
 
 async def send_message(text: str) -> int:
-    """Отправляет пост в канал. Возвращает message_id."""
-    html_text = markdown_to_telegram_html(text)
-    if not html_text:
+    """Отправляет пост в канал через Rich Messages API. Возвращает message_id."""
+    markdown = text.strip()
+    if not markdown:
         raise TelegramError("Пост пустой")
 
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendRichMessage"
     payload = {
         "chat_id": settings.telegram_channel_id,
-        "text": html_text,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": False,
+        "rich_message": {
+            "markdown": markdown,
+        },
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:

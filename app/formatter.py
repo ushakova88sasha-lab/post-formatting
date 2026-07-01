@@ -29,27 +29,6 @@ def _normalize_inline_tags(html_output: str) -> str:
     return html_output
 
 
-def _headers_to_telegram(html_output: str) -> str:
-    """Telegram не поддерживает h1–h3 — конвертируем в жирный текст."""
-    html_output = re.sub(r"<h1>(.*?)</h1>\s*", r"<b>\1</b>\n\n", html_output, flags=re.DOTALL | re.IGNORECASE)
-    html_output = re.sub(r"<h2>(.*?)</h2>\s*", r"<b>\1</b>\n", html_output, flags=re.DOTALL | re.IGNORECASE)
-    html_output = re.sub(r"<h3>(.*?)</h3>\s*", r"<b>\1</b>\n", html_output, flags=re.DOTALL | re.IGNORECASE)
-    return html_output
-
-
-def markdown_to_telegram_html(text: str) -> str:
-    """Конвертирует Markdown в HTML, совместимый с Telegram Bot API."""
-    if not text.strip():
-        return ""
-
-    html_output = _normalize_inline_tags(_markdown_to_html(text))
-    html_output = _headers_to_telegram(html_output)
-    html_output = html_output.strip()
-    html_output = re.sub(r"\n{3,}", "\n\n", html_output)
-
-    return html_output
-
-
 def preview_html(text: str) -> str:
     """HTML для превью в браузере (экранированный контент внутри тегов)."""
     if not text.strip():
