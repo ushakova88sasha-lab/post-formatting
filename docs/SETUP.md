@@ -138,6 +138,33 @@ pip install -r requirements.txt
 sudo systemctl restart telegram-admin
 ```
 
+## Автодеплой (GitHub Actions)
+
+При каждом `push` в ветки `main` или `cursor/telegram-admin-panel-684e` сайт на VPS обновляется автоматически.
+
+### Секреты в GitHub
+
+**Settings → Secrets and variables → Actions:**
+
+| Secret | Значение |
+|--------|----------|
+| `VPS_HOST` | IP сервера, например `159.194.203.99` |
+| `VPS_USER` | `root` |
+| `VPS_SSH_PASSWORD` | пароль SSH |
+
+На VPS должен быть включён вход по паролю (`PasswordAuthentication yes` в `/etc/ssh/sshd_config`).
+
+### Ручной запуск
+
+**Actions → Deploy to VPS → Run workflow**
+
+### Что делает workflow
+
+1. Подключается к VPS по SSH
+2. `git pull` ветки, из которой был push
+3. `pip install -r requirements.txt`
+4. `systemctl restart telegram-admin`
+
 ## Почему SQLite, а не «без БД»
 
 Для отложенной публикации нужно где-то хранить посты и время отправки. SQLite — это один файл на диске, без отдельного сервера PostgreSQL/MySQL. При перезапуске сервиса планировщик подхватывает неотправленные посты из базы.
