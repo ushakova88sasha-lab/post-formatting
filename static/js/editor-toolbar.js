@@ -357,7 +357,7 @@
       });
 
       if (res.status === 401) {
-        window.location.href = "/login";
+        redirectToLogin();
         return;
       }
 

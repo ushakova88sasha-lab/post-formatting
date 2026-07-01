@@ -31,13 +31,14 @@ async def login(payload: LoginRequest, response: Response):
         httponly=True,
         samesite="lax",
         max_age=SESSION_MAX_AGE,
+        path="/",
     )
     return {"ok": True, "username": payload.username}
 
 
 @router.post("/logout")
 async def logout(response: Response, _: str = Depends(require_user)):
-    response.delete_cookie(SESSION_COOKIE)
+    response.delete_cookie(SESSION_COOKIE, path="/")
     return {"ok": True}
 
 

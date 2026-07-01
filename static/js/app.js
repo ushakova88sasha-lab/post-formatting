@@ -10,7 +10,7 @@ async function api(path, options = {}) {
   });
 
   if (res.status === 401) {
-    window.location.href = "/login";
+    redirectToLogin();
     return null;
   }
 
@@ -95,7 +95,8 @@ function setChannelLabel(channel) {
 }
 
 async function loadPosts() {
-  posts = await api("/api/posts");
+  const data = await api("/api/posts");
+  posts = Array.isArray(data) ? data : [];
   renderPostList();
 }
 
@@ -222,20 +223,39 @@ async function schedulePost() {
 }
 
 async function init() {
+  const me = await api("/api/auth/me");
+  if (!me) return;
+
+  document.getElementById("username-label").textContent = me.username;
+
   try {
-    const me = await api("/api/auth/me");
-    if (!me) return;
-    document.getElementById("username-label").textContent = me.username;
+    const health = await fetch("/health");
+    if (health.ok) {
+      const healthData = await health.json();
+      setChannelLabel(healthData.channel);
+    }
+  } catch {
+    // канал в превью необязателен
+  }
 
-    const health = await fetch("/health").then((r) => r.json());
-    setChannelLabel(health.channel);
-
+  try {
     await loadPosts();
     if (posts.length) {
       await selectPost(posts[0].id);
+    } else {
+      showEditor(false);
     }
+  } catch (err) {
+    showEditor(false);
+    showAlert(err.message || "Не удалось загрузить посты");
+  }
+}
+
+async function bootstrap() {
+  try {
+    await init();
   } catch {
-    window.location.href = "/login";
+    redirectToLogin();
   }
 }
 
@@ -252,7 +272,7 @@ document.getElementById("schedule-btn").addEventListener("click", schedulePost);
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await api("/api/auth/logout", { method: "POST" });
-  window.location.href = "/login";
+  redirectToLogin();
 });
 
-init();
+bootstrap();

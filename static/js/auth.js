@@ -9,7 +9,7 @@ async function api(path, options = {}, { redirectOn401 = false } = {}) {
 
   if (res.status === 401) {
     if (redirectOn401) {
-      window.location.href = "/login";
+      redirectToLogin();
     }
     return null;
   }
@@ -43,7 +43,7 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   }
 });
 
-// Если уже авторизован — редирект на главную (без редиректа при 401)
+// Если уже авторизован — на главную (без редиректа при 401)
 api("/api/auth/me").then((data) => {
-  if (data) window.location.href = "/";
+  if (data) redirectToApp();
 });
