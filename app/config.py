@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     database_url: str = "sqlite:///./data/posts.db"
+    # Публичный URL сервера — нужен Telegram для загрузки картинок по HTTP
+    public_base_url: str = "http://localhost:8000"
 
 
 settings = Settings()

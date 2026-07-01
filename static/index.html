@@ -53,6 +53,11 @@
                 <button type="button" class="fmt-btn fmt-btn-icon" data-action="italic" title="Курсив"><i>I</i></button>
                 <button type="button" class="fmt-btn fmt-btn-icon" data-action="strike" title="Зачёркнутый"><s>S</s></button>
               </div>
+              <div class="fmt-separator"></div>
+              <div class="fmt-group">
+                <button type="button" class="fmt-btn fmt-btn-icon" id="image-upload-btn" data-action="image" title="Вставить изображение">🖼</button>
+                <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+              </div>
             </div>
             <div class="panel-body">
               <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
@@ -78,8 +83,8 @@
         </div>
 
         <p class="markdown-hint">
-          Панель форматирования: H1–H3, жирный, курсив, зачёркнутый. Выделите текст и нажмите кнопку
-          или примените заголовок к текущей строке.
+          H1–H3, жирный, курсив, зачёркнутый, изображение между абзацами (кнопка 🖼).
+          Картинка вставляется как отдельный блок — Telegram покажет её между текстом.
         </p>
       </div>
 

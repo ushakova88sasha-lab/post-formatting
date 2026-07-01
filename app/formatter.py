@@ -3,12 +3,36 @@ import re
 
 import markdown
 
+# Rich Markdown Telegram: ![](url) или ![](url "подпись")
+IMAGE_RE = re.compile(
+    r'!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"([^"]*)")?\)',
+    re.IGNORECASE,
+)
+
 
 def _preprocess_strikethrough(text: str) -> str:
     return re.sub(r"~~([^~\n]+?)~~", r"<del>\1</del>", text)
 
 
+def _preprocess_images(text: str) -> str:
+    def repl(match: re.Match) -> str:
+        url = html.escape(match.group(2), quote=True)
+        caption = match.group(3)
+        if caption:
+            cap = html.escape(caption)
+            return (
+                f'<figure class="tg-image-block">'
+                f'<img class="tg-image" src="{url}" alt="">'
+                f'<figcaption class="tg-image-caption">{cap}</figcaption>'
+                f"</figure>"
+            )
+        return f'<figure class="tg-image-block"><img class="tg-image" src="{url}" alt=""></figure>'
+
+    return IMAGE_RE.sub(repl, text)
+
+
 def _markdown_to_html(text: str) -> str:
+    text = _preprocess_images(text)
     text = _preprocess_strikethrough(text)
     return markdown.markdown(
         text,
@@ -36,7 +60,8 @@ def preview_html(text: str) -> str:
 
     raw_html = _normalize_inline_tags(_markdown_to_html(text))
     allowed = re.compile(
-        r"<(/?)(?:h[1-3]|b|i|u|s|code|pre|a|tg-spoiler)(?:\s[^>]*)?>",
+        r"<(/?)(?:figure|figcaption|img|h[1-3]|b|i|u|s|code|pre|a|tg-spoiler)"
+        r'(?:\s[^>]*)?>',
         re.IGNORECASE,
     )
 
@@ -45,7 +70,17 @@ def preview_html(text: str) -> str:
     for match in allowed.finditer(raw_html):
         if match.start() > last:
             parts.append(html.escape(raw_html[last : match.start()]))
-        parts.append(match.group(0))
+        tag = match.group(0)
+        if tag.lower().startswith("<img"):
+            safe = re.sub(
+                r'src="([^"]*)"',
+                lambda m: f'src="{html.escape(m.group(1), quote=True)}"',
+                tag,
+                flags=re.IGNORECASE,
+            )
+            parts.append(safe)
+        else:
+            parts.append(tag)
         last = match.end()
     if last < len(raw_html):
         parts.append(html.escape(raw_html[last:]))

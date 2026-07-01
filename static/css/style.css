@@ -504,6 +504,31 @@ select {
 .tg-message pre code { background: none; padding: 0; }
 .tg-message a { color: #6ab2f2; }
 
+.tg-image-block {
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tg-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.tg-image-caption {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.fmt-btn-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .schedule-row {
   display: flex;
   align-items: center;

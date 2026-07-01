@@ -1,5 +1,5 @@
 /**
- * Панель форматирования: H1–H3, жирный, курсив, зачёркнутый.
+ * Панель форматирования: H1–H3, жирный, курсив, зачёркнутый, изображения.
  */
 (function () {
   const HEADER_RE = /^(#{1,3})\s+(.*)$/;
@@ -80,22 +80,101 @@
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
+  function insertBlockAtCursor(block) {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    let before = textarea.value.substring(0, start);
+    let after = textarea.value.substring(end);
+
+    if (before.length > 0 && !before.endsWith("\n")) {
+      before += "\n";
+    }
+    if (before.length > 0 && !before.endsWith("\n\n")) {
+      before += "\n";
+    }
+    if (after.length > 0 && !after.startsWith("\n")) {
+      after = "\n" + after;
+    }
+
+    const insertion = block + "\n";
+    textarea.value = before + insertion + after;
+    const pos = before.length + insertion.length;
+    textarea.setSelectionRange(pos, pos);
+    textarea.focus();
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function buildImageMarkdown(url, caption) {
+    if (caption && caption.trim()) {
+      const safe = caption.trim().replace(/"/g, '\\"');
+      return `![](${url} "${safe}")`;
+    }
+    return `![](${url})`;
+  }
+
+  async function uploadAndInsertImage(file) {
+    const btn = document.getElementById("image-upload-btn");
+    btn.classList.add("fmt-btn-loading");
+    btn.textContent = "…";
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/uploads/image", {
+        method: "POST",
+        credentials: "same-origin",
+        body: formData,
+      });
+
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Ошибка загрузки");
+      }
+
+      const caption = window.prompt("Подпись к изображению (необязательно):", "") ?? "";
+      insertBlockAtCursor(buildImageMarkdown(data.url, caption));
+    } catch (err) {
+      window.alert(err.message || "Не удалось загрузить изображение");
+    } finally {
+      btn.classList.remove("fmt-btn-loading");
+      btn.textContent = "🖼";
+    }
+  }
+
   function setToolbarEnabled(enabled) {
     document.querySelectorAll(".fmt-btn").forEach((btn) => {
       btn.disabled = !enabled;
     });
+    const fileInput = document.getElementById("image-file-input");
+    if (fileInput) fileInput.disabled = !enabled;
   }
 
   function initToolbar() {
     const toolbar = document.getElementById("editor-toolbar");
+    const fileInput = document.getElementById("image-file-input");
     if (!toolbar) return;
 
     toolbar.addEventListener("click", (e) => {
       const btn = e.target.closest(".fmt-btn");
       if (!btn || btn.disabled) return;
-      e.preventDefault();
 
       const action = btn.dataset.action;
+      if (action === "image") {
+        e.preventDefault();
+        fileInput?.click();
+        return;
+      }
+
+      e.preventDefault();
       switch (action) {
         case "h1":
           applyHeader(1);
@@ -116,6 +195,12 @@
           wrapSelection("~~", "~~");
           break;
       }
+    });
+
+    fileInput?.addEventListener("change", () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = "";
+      if (file) uploadAndInsertImage(file);
     });
 
     window.editorToolbar = { setToolbarEnabled };
