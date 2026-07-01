@@ -1,6 +1,6 @@
 # Форматирование Markdown
 
-Редактор использует **Rich Markdown** — тот же формат, что и новое форматирование Telegram (`sendRichMessage`).
+Редактор использует **Rich Markdown** из [Telegram Bot API](https://core.telegram.org/bots/api#formatting-options) (`sendRichMessage`).
 
 ## Панель инструментов
 
@@ -12,7 +12,7 @@
 | ~~S~~ | `~~текст~~` | ~~зачёркнутый~~ |
 | <u>U</u> | `<u>текст</u>` | подчёркнутый |
 | **M** | `==текст==` | выделение маркером |
-| ≡ | `<pullquote>…</pullquote>` | текст по центру (Telegram pull quote) |
+| ≡ | `<aside>…</aside>` | текст по центру (pull quote, Rich HTML) |
 | 👁 | `\|\|текст\|\|` | спойлер |
 | `<>` | `` `текст` `` | моноширинный код |
 | X₂ | `<sub>2</sub>` | H<sub>2</sub>O |
@@ -52,7 +52,7 @@
 ```markdown
 Подчёркнутый <u>текст</u>, ==маркер==, ||спойлер||, `код`
 
-<pullquote>Текст по центру</pullquote>
+<aside>Текст по центру</aside>
 
 Формулы: H<sub>2</sub>O или $H_2O$, энергия $E=mc^2$
 

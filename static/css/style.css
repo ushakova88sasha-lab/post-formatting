@@ -579,7 +579,7 @@ select {
 
 .tg-message p[style*="text-align: center"],
 .tg-message p.tg-center,
-.tg-message pullquote {
+.tg-message aside {
   display: block;
   text-align: center;
   width: 100%;

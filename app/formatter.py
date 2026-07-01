@@ -10,7 +10,8 @@ MEDIA_RE = re.compile(
 )
 
 _CENTER_BLOCK_RE = re.compile(
-    r"<pullquote>(?P<content>[\s\S]*?)</pullquote>"
+    r"<aside>(?P<content>[\s\S]*?)</aside>"
+    r"|<pullquote>(?P<pullquote>[\s\S]*?)</pullquote>"
     r'|<p style="text-align:\s*center">(?P<legacy>[\s\S]*?)</p>',
     re.IGNORECASE,
 )
@@ -108,7 +109,7 @@ def _render_markdown_chunk(text: str) -> str:
 def _render_center_block(content: str) -> str:
     inner_html = _render_markdown_chunk(content.strip())
     if not inner_html:
-        return "<pullquote></pullquote>"
+        return "<aside></aside>"
     if (
         inner_html.startswith("<p>")
         and inner_html.endswith("</p>")
@@ -116,7 +117,7 @@ def _render_center_block(content: str) -> str:
         and inner_html.count("</p>") == 1
     ):
         inner_html = inner_html[3:-4]
-    return f"<pullquote>{inner_html}</pullquote>"
+    return f"<aside>{inner_html}</aside>"
 
 
 def _markdown_to_html(text: str) -> str:
@@ -130,7 +131,7 @@ def _markdown_to_html(text: str) -> str:
             parts.append(_render_markdown_chunk(text[last : match.start()]))
         content = match.group("content")
         if content is None:
-            content = match.group("legacy") or ""
+            content = match.group("pullquote") or match.group("legacy") or ""
         parts.append(_render_center_block(content))
         last = match.end()
 
@@ -141,7 +142,7 @@ def _markdown_to_html(text: str) -> str:
 
 
 ALLOWED_TAG_RE = re.compile(
-    r"<(/?)(?:figure|figcaption|img|video|audio|details|summary|blockquote|pullquote|cite|div|mark|span|br|"
+    r"<(/?)(?:figure|figcaption|img|video|audio|details|summary|blockquote|aside|cite|div|mark|span|br|"
     r"table|thead|tbody|tr|th|td|ul|ol|li|p|h[1-3]|b|i|u|s|sub|sup|code|pre|a)(?:\s[^>]*)?>",
     re.IGNORECASE,
 )

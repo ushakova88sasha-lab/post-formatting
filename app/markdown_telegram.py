@@ -2,7 +2,8 @@ import re
 
 _FENCE_RE = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)")
 _CENTER_BLOCK_RE = re.compile(
-    r"<pullquote>[\s\S]*?</pullquote>"
+    r"<aside>[\s\S]*?</aside>"
+    r"|<pullquote>[\s\S]*?</pullquote>"
     r'|<p style="text-align:\s*center">[\s\S]*?</p>',
     re.IGNORECASE,
 )

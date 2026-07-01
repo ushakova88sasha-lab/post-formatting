@@ -8,30 +8,35 @@ def test_marker_highlight_in_preview():
 
 
 def test_center_align_in_preview():
-    html = preview_html("<pullquote>По центру</pullquote>")
-    assert "<pullquote>По центру</pullquote>" in html
-    assert "&lt;pullquote&gt;" not in html
+    html = preview_html("<aside>По центру</aside>")
+    assert "<aside>По центру</aside>" in html
+    assert "&lt;aside&gt;" not in html
+
+
+def test_center_legacy_pullquote_in_preview():
+    html = preview_html("<pullquote>Старый формат</pullquote>")
+    assert "<aside>Старый формат</aside>" in html
 
 
 def test_center_legacy_paragraph_in_preview():
     html = preview_html('<p style="text-align: center">Старый формат</p>')
-    assert "<pullquote>Старый формат</pullquote>" in html
+    assert "<aside>Старый формат</aside>" in html
 
 
 def test_center_with_surrounding_text():
-    html = preview_html("Слева\n\n<pullquote>Центр</pullquote>\n\nСправа")
-    assert "<pullquote>Центр</pullquote>" in html
+    html = preview_html("Слева\n\n<aside>Центр</aside>\n\nСправа")
+    assert "<aside>Центр</aside>" in html
     assert "Слева" in html
     assert "Справа" in html
 
 
 def test_marker_and_center_together():
-    html = preview_html("<pullquote>==Важно==</pullquote>")
-    assert "<pullquote>" in html
+    html = preview_html("<aside>==Важно==</aside>")
+    assert "<aside>" in html
     assert '<mark class="tg-mark">Важно</mark>' in html
 
 
 def test_center_prepared_for_telegram():
-    prepared = prepare_markdown_for_telegram("<pullquote>Строка 1\nСтрока 2</pullquote>")
-    assert "<pullquote>" in prepared
+    prepared = prepare_markdown_for_telegram("<aside>Строка 1\nСтрока 2</aside>")
+    assert "<aside>" in prepared
     assert "<br>" in prepared

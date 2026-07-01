@@ -47,6 +47,7 @@ def strip_markdown(text: str) -> str:
         flags=re.IGNORECASE,
     )
     text = re.sub(r"<br\s*/?>", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"<aside>([\s\S]*?)</aside>", r"\1", text, flags=re.IGNORECASE)
     text = re.sub(r"<pullquote>([\s\S]*?)</pullquote>", r"\1", text, flags=re.IGNORECASE)
     text = re.sub(r'<p style="text-align:\s*center">([\s\S]*?)</p>', r"\1", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
