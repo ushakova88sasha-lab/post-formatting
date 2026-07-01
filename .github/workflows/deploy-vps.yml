@@ -3,8 +3,8 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - cursor/telegram-admin-panel-684e
       - main
+      - cursor/telegram-admin-panel-684e
   workflow_dispatch:
 
 jobs:
@@ -18,13 +18,21 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_SSH_PASSWORD }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
           script: |
             set -e
-            cd /opt/post-formatting
+            BRANCH="${{ github.ref_name }}"
+            APP_DIR=/opt/post-formatting
+
+            cd "$APP_DIR"
             git fetch origin
-            git checkout cursor/telegram-admin-panel-684e || git checkout main
-            git pull origin "$(git branch --show-current)"
+            git checkout "$BRANCH"
+            git pull origin "$BRANCH"
+
             source venv/bin/activate
             pip install -q -r requirements.txt
+
             systemctl restart telegram-admin
             systemctl is-active telegram-admin
+
+            echo "Deployed branch $BRANCH at $(git rev-parse --short HEAD)"
