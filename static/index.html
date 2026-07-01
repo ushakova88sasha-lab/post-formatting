@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telegram Admin — Редактор постов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="header">
+    <h1>Telegram Admin</h1>
+    <div class="header-actions">
+      <span id="username-label"></span>
+      <button class="btn btn-secondary" id="logout-btn">Выйти</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Посты</h2>
+      <button class="btn btn-primary" id="new-post-btn" style="width:100%; margin-bottom: 0.75rem;">+ Новый пост</button>
+      <ul class="post-list" id="post-list"></ul>
+    </aside>
+
+    <main class="main">
+      <div id="alert" class="alert hidden"></div>
+
+      <div id="editor-view" class="hidden">
+        <div class="editor-header">
+          <input type="text" id="post-title" placeholder="Заголовок (только для себя, в Telegram не уходит)">
+          <div class="editor-actions">
+            <button class="btn btn-secondary" id="save-btn">Сохранить</button>
+            <button class="btn btn-primary" id="publish-btn">Опубликовать</button>
+          </div>
+        </div>
+
+        <div class="editor-grid">
+          <div class="panel">
+            <div class="panel-header">Текст (Markdown)</div>
+            <div class="panel-body">
+              <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">Превью Telegram</div>
+            <div class="panel-body">
+              <div class="tg-preview-wrap">
+                <div class="tg-channel-name" id="channel-name">@channel</div>
+                <div id="preview-content">
+                  <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="schedule-row">
+          <label for="schedule-at">Запланировать:</label>
+          <input type="datetime-local" id="schedule-at">
+          <button class="btn btn-secondary" id="schedule-btn">Запланировать</button>
+        </div>
+
+        <p class="markdown-hint">
+          Поддерживается Markdown: <strong>**жирный**</strong>, <em>*курсив*</em>, <code>`код`</code>,
+          <code>```блок кода```</code>, [ссылки](url), ~~зачёркнутый~~.
+          Время планирования — ваше локальное, на сервер уходит в UTC.
+        </p>
+      </div>
+
+      <div id="empty-view" class="empty-state">
+        <p>Выберите пост из списка или создайте новый</p>
+        <button class="btn btn-primary" id="empty-new-btn">+ Новый пост</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
