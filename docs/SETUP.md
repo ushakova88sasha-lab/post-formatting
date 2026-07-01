@@ -140,7 +140,7 @@ sudo systemctl restart telegram-admin
 
 ## Автодеплой (GitHub Actions)
 
-При каждом `push` в ветки `main` или `cursor/telegram-admin-panel-684e` сайт на VPS обновляется автоматически.
+При каждом `push` в ветку `cursor/telegram-admin-panel-684e` сайт на VPS обновляется автоматически.
 
 ### Секреты в GitHub
 
