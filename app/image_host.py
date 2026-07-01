@@ -1,4 +1,3 @@
-import json
 import re
 from pathlib import Path
 
@@ -8,14 +7,16 @@ from app.config import BASE_DIR
 
 UPLOAD_DIR = BASE_DIR / "data" / "uploads"
 
-IMAGE_MD_RE = re.compile(
+MEDIA_MD_RE = re.compile(
     r'!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"([^"]*)")?\)',
     re.IGNORECASE,
 )
 
+VIDEO_EXT = {".mp4", ".webm", ".mov"}
+AUDIO_EXT = {".mp3", ".ogg", ".wav", ".m4a", ".mpeg"}
+
 
 def _local_filename(url: str) -> str | None:
-    """Извлекает имя файла, если URL указывает на наш /uploads/."""
     marker = "/uploads/"
     if marker not in url:
         return None
@@ -26,11 +27,9 @@ def _local_filename(url: str) -> str | None:
 
 
 async def _upload_to_public_host(file_path: Path) -> str:
-    """Загружает файл на публичный HTTPS-хостинг для Telegram."""
     content = file_path.read_bytes()
 
-    async with httpx.AsyncClient(timeout=90.0) as client:
-        # uguu.se — публичный HTTPS URL для Rich Messages
+    async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(
             "https://uguu.se/upload",
             files={"files[]": (file_path.name, content)},
@@ -42,7 +41,6 @@ async def _upload_to_public_host(file_path: Path) -> str:
             if url.startswith("https://"):
                 return url
 
-        # запасной вариант: litterbox (временные ссылки)
         response = await client.post(
             "https://litterbox.catbox.moe/resources/internals/api.php",
             data={"reqtype": "fileupload", "time": "72h"},
@@ -53,18 +51,15 @@ async def _upload_to_public_host(file_path: Path) -> str:
         if url.startswith("https://"):
             return url
 
-    raise ValueError("Не удалось получить публичный URL изображения")
+    raise ValueError("Не удалось получить публичный URL файла")
 
 
-async def resolve_images_for_telegram(markdown: str) -> str:
-    """
-    Заменяет локальные URL картинок на публичные HTTPS.
-    Telegram Rich Messages не могут скачать http://IP:8000/uploads/...
-    """
+async def resolve_media_for_telegram(markdown: str) -> str:
+    """Заменяет локальные URL медиа на публичные HTTPS для Telegram."""
     result = markdown
     seen: set[str] = set()
 
-    for match in IMAGE_MD_RE.finditer(markdown):
+    for match in MEDIA_MD_RE.finditer(markdown):
         url = match.group(2)
         if url in seen:
             continue
@@ -79,9 +74,13 @@ async def resolve_images_for_telegram(markdown: str) -> str:
 
         file_path = UPLOAD_DIR / filename
         if not file_path.is_file():
-            raise ValueError(f"Файл изображения не найден: {filename}")
+            raise ValueError(f"Файл не найден: {filename}")
 
         public_url = await _upload_to_public_host(file_path)
         result = result.replace(url, public_url)
 
     return result
+
+
+# Обратная совместимость
+resolve_images_for_telegram = resolve_media_for_telegram

@@ -1,32 +1,57 @@
 import html
 import re
+from pathlib import Path
 
 import markdown
 
-IMAGE_RE = re.compile(
+MEDIA_RE = re.compile(
     r'!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"([^"]*)")?\)',
     re.IGNORECASE,
 )
 
 CHECKLIST_LINE = re.compile(r"^- \[([ xX])\]\s+(.*)$")
-LIST_LINE = re.compile(r"^(\s*)([-*+]|\d+\.)\s+(.*)$")
+
+VIDEO_EXT = {".mp4", ".webm", ".mov"}
+AUDIO_EXT = {".mp3", ".ogg", ".wav", ".m4a"}
 
 
-def _preprocess_images(text: str) -> str:
+def _media_kind(url: str) -> str:
+    ext = Path(url.split("?")[0]).suffix.lower()
+    if ext in VIDEO_EXT:
+        return "video"
+    if ext in AUDIO_EXT:
+        return "audio"
+    return "image"
+
+
+def _preprocess_media(text: str) -> str:
     def repl(match: re.Match) -> str:
         url = html.escape(match.group(2), quote=True)
         caption = match.group(3)
+        cap_html = ""
         if caption:
-            cap = html.escape(caption)
-            return (
-                f'<figure class="tg-image-block">'
-                f'<img class="tg-image" src="{url}" alt="">'
-                f'<figcaption class="tg-image-caption">{cap}</figcaption>'
-                f"</figure>"
-            )
-        return f'<figure class="tg-image-block"><img class="tg-image" src="{url}" alt=""></figure>'
+            cap_html = f'<figcaption class="tg-media-caption">{html.escape(caption)}</figcaption>'
 
-    return IMAGE_RE.sub(repl, text)
+        kind = _media_kind(match.group(2))
+        if kind == "video":
+            return (
+                f'<figure class="tg-video-block">'
+                f'<video class="tg-video" src="{url}" controls preload="metadata"></video>'
+                f"{cap_html}</figure>"
+            )
+        if kind == "audio":
+            return (
+                f'<figure class="tg-audio-block">'
+                f'<audio class="tg-audio" src="{url}" controls preload="metadata"></audio>'
+                f"{cap_html}</figure>"
+            )
+        return (
+            f'<figure class="tg-image-block">'
+            f'<img class="tg-image" src="{url}" alt="">'
+            f"{cap_html}</figure>"
+        )
+
+    return MEDIA_RE.sub(repl, text)
 
 
 def _preprocess_checklists(text: str) -> str:
@@ -62,7 +87,7 @@ def _preprocess_rich_inline(text: str) -> str:
 
 
 def _markdown_to_html(text: str) -> str:
-    text = _preprocess_images(text)
+    text = _preprocess_media(text)
     text = _preprocess_checklists(text)
     text = _preprocess_rich_inline(text)
     return markdown.markdown(
@@ -73,8 +98,8 @@ def _markdown_to_html(text: str) -> str:
 
 
 ALLOWED_TAG_RE = re.compile(
-    r"<(/?)(?:figure|figcaption|img|div|mark|span|table|thead|tbody|tr|th|td|"
-    r"ul|ol|li|p|h[1-3]|b|i|u|s|sub|sup|code|pre|a)(?:\s[^>]*)?>",
+    r"<(/?)(?:figure|figcaption|img|video|audio|details|summary|blockquote|div|mark|span|br|"
+    r"table|thead|tbody|tr|th|td|ul|ol|li|p|h[1-3]|b|i|u|s|sub|sup|code|pre|a)(?:\s[^>]*)?>",
     re.IGNORECASE,
 )
 
@@ -86,7 +111,7 @@ def _sanitize_html(raw_html: str) -> str:
         if match.start() > last:
             parts.append(html.escape(raw_html[last : match.start()]))
         tag = match.group(0)
-        if tag.lower().startswith("<img"):
+        if tag.lower().startswith(("<img", "<video", "<audio")):
             tag = re.sub(
                 r'src="([^"]*)"',
                 lambda m: f'src="{html.escape(m.group(1), quote=True)}"',

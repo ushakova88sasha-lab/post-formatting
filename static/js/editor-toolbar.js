@@ -163,12 +163,33 @@
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  function buildImageMarkdown(url, caption) {
+  function buildMediaMarkdown(url, caption) {
     if (caption && caption.trim()) {
       const safe = caption.trim().replace(/"/g, '\\"');
       return `![](${url} "${safe}")`;
     }
     return `![](${url})`;
+  }
+
+  function insertQuote() {
+    applyLinesTransform((line) => {
+      if (/^\s*>/.test(line)) return line;
+      return `> ${line}`;
+    });
+  }
+
+  function insertDetails() {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end);
+
+    const summary = window.prompt("Заголовок скрывающегося блока:", "Подробнее") ?? "Подробнее";
+    const content = selected || "Скрытый текст…";
+    const block = `<details><summary>${summary.trim()}</summary>\n${content}\n</details>`;
+    insertBlockAtCursor(block);
   }
 
   function insertLink() {
@@ -205,8 +226,11 @@
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  async function uploadAndInsertImage(file) {
-    const btn = document.getElementById("image-upload-btn");
+  async function uploadAndInsertMedia(file, endpoint, btnId, label) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+
+    const origText = btn.textContent;
     btn.classList.add("fmt-btn-loading");
     btn.textContent = "…";
 
@@ -214,7 +238,7 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/uploads/image", {
+      const res = await fetch(endpoint, {
         method: "POST",
         credentials: "same-origin",
         body: formData,
@@ -230,22 +254,36 @@
         throw new Error(data.detail || "Ошибка загрузки");
       }
 
-      const caption = window.prompt("Подпись к изображению (необязательно):", "") ?? "";
-      insertBlockAtCursor(buildImageMarkdown(data.url, caption));
+      const caption = window.prompt(`Подпись к ${label} (необязательно):`, "") ?? "";
+      insertBlockAtCursor(buildMediaMarkdown(data.url, caption));
     } catch (err) {
-      window.alert(err.message || "Не удалось загрузить изображение");
+      window.alert(err.message || `Не удалось загрузить ${label}`);
     } finally {
       btn.classList.remove("fmt-btn-loading");
-      btn.textContent = "🖼";
+      btn.textContent = origText;
     }
+  }
+
+  function uploadAndInsertImage(file) {
+    return uploadAndInsertMedia(file, "/api/uploads/image", "image-upload-btn", "изображению");
+  }
+
+  function uploadAndInsertVideo(file) {
+    return uploadAndInsertMedia(file, "/api/uploads/video", "video-upload-btn", "видео");
+  }
+
+  function uploadAndInsertAudio(file) {
+    return uploadAndInsertMedia(file, "/api/uploads/audio", "audio-upload-btn", "аудио");
   }
 
   function setToolbarEnabled(enabled) {
     document.querySelectorAll(".fmt-btn").forEach((btn) => {
       btn.disabled = !enabled;
     });
-    const fileInput = document.getElementById("image-file-input");
-    if (fileInput) fileInput.disabled = !enabled;
+    ["image-file-input", "video-file-input", "audio-file-input"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !enabled;
+    });
   }
 
   function handleToolbarClick(e) {
@@ -256,6 +294,16 @@
     if (action === "image") {
       e.preventDefault();
       document.getElementById("image-file-input")?.click();
+      return;
+    }
+    if (action === "video") {
+      e.preventDefault();
+      document.getElementById("video-file-input")?.click();
+      return;
+    }
+    if (action === "audio") {
+      e.preventDefault();
+      document.getElementById("audio-file-input")?.click();
       return;
     }
 
@@ -315,20 +363,34 @@
       case "table":
         insertTable();
         break;
+      case "quote":
+        insertQuote();
+        break;
+      case "details":
+        insertDetails();
+        break;
     }
   }
 
   function initToolbar() {
-    const fileInput = document.getElementById("image-file-input");
-
     document.querySelectorAll(".editor-toolbar").forEach((toolbar) => {
       toolbar.addEventListener("click", handleToolbarClick);
     });
 
-    fileInput?.addEventListener("change", () => {
-      const file = fileInput.files?.[0];
-      fileInput.value = "";
+    document.getElementById("image-file-input")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
       if (file) uploadAndInsertImage(file);
+    });
+    document.getElementById("video-file-input")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) uploadAndInsertVideo(file);
+    });
+    document.getElementById("audio-file-input")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) uploadAndInsertAudio(file);
     });
 
     window.editorToolbar = { setToolbarEnabled };

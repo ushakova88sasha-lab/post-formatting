@@ -634,11 +634,77 @@ select {
   border-radius: 8px;
 }
 
-.tg-image-caption {
+.tg-image-caption,
+.tg-media-caption {
   margin-top: 0.35rem;
   font-size: 0.8rem;
   color: var(--text-muted);
   text-align: center;
+}
+
+.tg-video-block,
+.tg-audio-block {
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tg-video {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  background: #000;
+}
+
+.tg-audio {
+  display: block;
+  width: 100%;
+}
+
+.tg-message.tg-rich blockquote {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(42, 171, 238, 0.08);
+  color: var(--text-muted);
+  border-radius: 0 6px 6px 0;
+}
+
+.tg-message.tg-rich blockquote p {
+  margin: 0.25rem 0;
+}
+
+.tg-message.tg-rich details {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.tg-message.tg-rich details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  user-select: none;
+  list-style: none;
+}
+
+.tg-message.tg-rich details summary::-webkit-details-marker {
+  display: none;
+}
+
+.tg-message.tg-rich details summary::before {
+  content: "▶ ";
+  font-size: 0.75em;
+}
+
+.tg-message.tg-rich details[open] summary::before {
+  content: "▼ ";
+}
+
+.tg-message.tg-rich details[open] summary {
+  margin-bottom: 0.5rem;
 }
 
 .fmt-btn-loading {

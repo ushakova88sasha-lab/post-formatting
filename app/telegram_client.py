@@ -1,7 +1,7 @@
 import httpx
 
 from app.config import settings
-from app.image_host import resolve_images_for_telegram
+from app.image_host import resolve_media_for_telegram
 
 
 class TelegramError(Exception):
@@ -17,9 +17,9 @@ async def send_message(text: str) -> int:
         raise TelegramError("Пост пустой")
 
     try:
-        markdown = await resolve_images_for_telegram(markdown)
+        markdown = await resolve_media_for_telegram(markdown)
     except Exception as exc:
-        raise TelegramError(f"Ошибка подготовки изображений: {exc}") from exc
+        raise TelegramError(f"Ошибка подготовки медиа: {exc}") from exc
 
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendRichMessage"
     payload = {
