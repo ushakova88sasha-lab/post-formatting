@@ -70,6 +70,17 @@ function moscowDatetimeLocalToUtcIso(value) {
 }
 
 function postListTitle(post) {
+  const generic = (value) => {
+    const text = (value || "").trim().toLowerCase();
+    return !text || text === "новый пост" || text === "без названия";
+  };
+
+  if (post.display_title && !generic(post.display_title)) {
+    return post.display_title;
+  }
+  if (post.title && !generic(post.title)) {
+    return post.title;
+  }
   return post.display_title || post.title || "Без названия";
 }
 

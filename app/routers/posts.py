@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app.auth import require_user
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
-from app.post_utils import DEFAULT_POST_TITLE, display_post_title, title_from_content
+from app.post_utils import (
+    DEFAULT_POST_TITLE,
+    display_post_title,
+    maybe_fix_generic_title,
+    title_from_content,
+)
 from app.scheduler import cancel_scheduled_post, publish_post_by_id, schedule_post
 from app.telegram_client import TelegramError, send_message
 
@@ -54,9 +59,21 @@ def post_to_dict(post: Post) -> dict:
     }
 
 
+def _sync_generic_titles(posts: list[Post], db: Session) -> None:
+    changed = False
+    for post in posts:
+        derived = maybe_fix_generic_title(post.title, post.content)
+        if derived and post.title != derived:
+            post.title = derived
+            changed = True
+    if changed:
+        db.commit()
+
+
 @router.get("")
 async def list_posts(db: Session = Depends(get_db), _: str = Depends(require_user)):
     posts = db.query(Post).order_by(Post.updated_at.desc()).all()
+    _sync_generic_titles(posts, db)
     return [post_to_dict(p) for p in posts]
 
 
@@ -74,6 +91,11 @@ async def get_post(post_id: int, db: Session = Depends(get_db), _: str = Depends
     post = db.get(Post, post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
+    derived = maybe_fix_generic_title(post.title, post.content)
+    if derived and post.title != derived:
+        post.title = derived
+        db.commit()
+        db.refresh(post)
     return post_to_dict(post)
 
 

@@ -6,6 +6,16 @@ def test_title_from_content_strips_markdown():
     assert title_from_content(content) == "Заголовок"
 
 
+def test_title_from_content_skips_leading_image_line():
+    content = "![](/uploads/photo.png)\n\nПервые слова публикации"
+    assert title_from_content(content) == "Первые слова публикации"
+
+
+def test_title_from_content_uses_image_caption():
+    content = '![](/uploads/photo.png "Подпись к фото")\n\nДальше текст'
+    assert title_from_content(content) == "Подпись к фото"
+
+
 def test_title_from_content_strips_telegram_formatting():
     content = "==Выделение== и ||спойлер|| с ~~зачёркиванием~~"
     assert title_from_content(content) == "Выделение и спойлер с зачёркиванием"
@@ -28,6 +38,11 @@ def test_display_post_title_uses_content_for_default_title():
     assert title == "Первый абзац публикации"
 
 
+def test_display_post_title_never_returns_default_when_content_exists():
+    title = display_post_title(DEFAULT_POST_TITLE, "**Старт** важной новости")
+    assert title == "Старт важной новости"
+
+
 def test_display_post_title_keeps_custom_title():
     assert display_post_title("Мой заголовок", "Текст поста") == "Мой заголовок"
 
@@ -37,6 +52,6 @@ def test_display_post_title_strips_markdown_from_saved_title():
     assert title == "Опубликованный пост"
 
 
-def test_strip_markdown_removes_image_and_link():
+def test_strip_markdown_keeps_image_alt_and_link_text():
     text = strip_markdown("![картинка](/uploads/a.png) и [текст](https://t.me)")
-    assert text == "и текст"
+    assert text == "картинка и текст"
