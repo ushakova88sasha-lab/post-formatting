@@ -42,6 +42,7 @@ python run.py
 - [Установка и деплой на VPS](docs/SETUP.md)
 - [API](docs/API.md)
 - [Форматирование Markdown](docs/MARKDOWN.md)
+- [Obsidian](obsidian/Telegram%20Admin.md) — заметки для Obsidian (wikilinks, теги)
 
 ## Стек
 
