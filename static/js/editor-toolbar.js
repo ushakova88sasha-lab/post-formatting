@@ -226,7 +226,97 @@
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  async function uploadAndInsertMedia(file, endpoint, btnId, label) {
+  function showMediaCaptionDialog({ url, kind, filename }) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("media-insert-modal");
+      const preview = document.getElementById("media-insert-preview");
+      const captionInput = document.getElementById("media-insert-caption");
+      const confirmBtn = document.getElementById("media-insert-confirm");
+      const cancelBtn = document.getElementById("media-insert-cancel");
+      const title = document.getElementById("media-insert-title");
+
+      if (!modal || !preview || !captionInput) {
+        resolve("");
+        return;
+      }
+
+      const titles = { image: "Изображение", video: "Видео", audio: "Аудио" };
+      title.textContent = titles[kind] || "Медиа";
+      captionInput.placeholder =
+        kind === "image" ? "Текст под картинкой" : kind === "video" ? "Текст под видео" : "Текст под аудио";
+
+      preview.innerHTML = "";
+      if (kind === "image") {
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "";
+        img.className = "media-insert-thumb";
+        preview.appendChild(img);
+      } else if (kind === "video") {
+        const video = document.createElement("video");
+        video.src = url;
+        video.controls = true;
+        video.className = "media-insert-thumb";
+        preview.appendChild(video);
+      } else {
+        const wrap = document.createElement("div");
+        wrap.className = "media-insert-audio";
+        const icon = document.createElement("span");
+        icon.textContent = "🎵";
+        const name = document.createElement("span");
+        name.textContent = filename || "Аудиофайл";
+        wrap.append(icon, name);
+        preview.appendChild(wrap);
+      }
+
+      captionInput.value = "";
+      modal.classList.remove("hidden");
+
+      function cleanup() {
+        modal.classList.remove("visible");
+        modal.classList.add("hidden");
+        confirmBtn.removeEventListener("click", onConfirm);
+        cancelBtn.removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onOverlay);
+        document.removeEventListener("keydown", onKey);
+      }
+
+      function onConfirm() {
+        const caption = captionInput.value;
+        cleanup();
+        resolve(caption);
+      }
+
+      function onCancel() {
+        cleanup();
+        resolve(null);
+      }
+
+      function onOverlay(e) {
+        if (e.target === modal) onCancel();
+      }
+
+      function onKey(e) {
+        if (e.key === "Escape") onCancel();
+        if (e.key === "Enter" && document.activeElement === captionInput) {
+          e.preventDefault();
+          onConfirm();
+        }
+      }
+
+      confirmBtn.addEventListener("click", onConfirm);
+      cancelBtn.addEventListener("click", onCancel);
+      modal.addEventListener("click", onOverlay);
+      document.addEventListener("keydown", onKey);
+
+      requestAnimationFrame(() => {
+        modal.classList.add("visible");
+        captionInput.focus();
+      });
+    });
+  }
+
+  async function uploadAndInsertMedia(file, endpoint, btnId, kind) {
     const btn = document.getElementById(btnId);
     if (!btn) return;
 
@@ -254,10 +344,16 @@
         throw new Error(data.detail || "Ошибка загрузки");
       }
 
-      const caption = window.prompt(`Подпись к ${label} (необязательно):`, "") ?? "";
+      const caption = await showMediaCaptionDialog({
+        url: data.url,
+        kind,
+        filename: file.name,
+      });
+      if (caption === null) return;
+
       insertBlockAtCursor(buildMediaMarkdown(data.url, caption));
     } catch (err) {
-      window.alert(err.message || `Не удалось загрузить ${label}`);
+      window.alert(err.message || "Не удалось загрузить файл");
     } finally {
       btn.classList.remove("fmt-btn-loading");
       btn.textContent = origText;
@@ -265,15 +361,15 @@
   }
 
   function uploadAndInsertImage(file) {
-    return uploadAndInsertMedia(file, "/api/uploads/image", "image-upload-btn", "изображению");
+    return uploadAndInsertMedia(file, "/api/uploads/image", "image-upload-btn", "image");
   }
 
   function uploadAndInsertVideo(file) {
-    return uploadAndInsertMedia(file, "/api/uploads/video", "video-upload-btn", "видео");
+    return uploadAndInsertMedia(file, "/api/uploads/video", "video-upload-btn", "video");
   }
 
   function uploadAndInsertAudio(file) {
-    return uploadAndInsertMedia(file, "/api/uploads/audio", "audio-upload-btn", "аудио");
+    return uploadAndInsertMedia(file, "/api/uploads/audio", "audio-upload-btn", "audio");
   }
 
   function setToolbarEnabled(enabled) {
