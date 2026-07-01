@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.auth import require_user
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
+from app.post_utils import DEFAULT_POST_TITLE, display_post_title, title_from_content
 from app.scheduler import cancel_scheduled_post, publish_post_by_id, schedule_post
 from app.telegram_client import TelegramError, send_message
 
@@ -31,18 +32,25 @@ class PreviewRequest(BaseModel):
     content: str
 
 
+def _utc_iso(dt: datetime | None) -> str | None:
+    if not dt:
+        return None
+    return dt.isoformat() + "Z"
+
+
 def post_to_dict(post: Post) -> dict:
     return {
         "id": post.id,
         "title": post.title,
+        "display_title": display_post_title(post.title, post.content),
         "content": post.content,
         "status": post.status,
-        "scheduled_at": post.scheduled_at.isoformat() if post.scheduled_at else None,
-        "published_at": post.published_at.isoformat() if post.published_at else None,
+        "scheduled_at": _utc_iso(post.scheduled_at),
+        "published_at": _utc_iso(post.published_at),
         "telegram_message_id": post.telegram_message_id,
         "error_message": post.error_message,
-        "created_at": post.created_at.isoformat() if post.created_at else None,
-        "updated_at": post.updated_at.isoformat() if post.updated_at else None,
+        "created_at": _utc_iso(post.created_at),
+        "updated_at": _utc_iso(post.updated_at),
     }
 
 
@@ -126,6 +134,10 @@ async def publish_now(post_id: int, db: Session = Depends(get_db), _: str = Depe
 
     try:
         message_id = await send_message(post.content)
+        if not post.title or post.title.strip() == DEFAULT_POST_TITLE:
+            derived = title_from_content(post.content)
+            if derived:
+                post.title = derived
         post.status = PostStatus.PUBLISHED.value
         post.published_at = datetime.utcnow()
         post.telegram_message_id = message_id
