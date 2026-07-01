@@ -115,6 +115,40 @@
     return `![](${url})`;
   }
 
+  function insertLink() {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const url = window.prompt("URL ссылки:", "https://t.me/dnative");
+    if (!url) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end) || "ссылка";
+    const link = `[${selected}](${url.trim()})`;
+
+    textarea.value = textarea.value.substring(0, start) + link + textarea.value.substring(end);
+    const pos = start + link.length;
+    textarea.setSelectionRange(pos, pos);
+    textarea.focus();
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function wrapMath() {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end);
+    const inner = selected || "E=mc^2";
+
+    textarea.value = textarea.value.substring(0, start) + "$" + inner + "$" + textarea.value.substring(end);
+    textarea.setSelectionRange(start + 1, start + 1 + inner.length);
+    textarea.focus();
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   async function uploadAndInsertImage(file) {
     const btn = document.getElementById("image-upload-btn");
     btn.classList.add("fmt-btn-loading");
@@ -193,6 +227,27 @@
           break;
         case "strike":
           wrapSelection("~~", "~~");
+          break;
+        case "underline":
+          wrapSelection("<u>", "</u>");
+          break;
+        case "marker":
+          wrapSelection("==", "==");
+          break;
+        case "spoiler":
+          wrapSelection("||", "||");
+          break;
+        case "code":
+          wrapSelection("`", "`");
+          break;
+        case "sub":
+          wrapSelection("<sub>", "</sub>");
+          break;
+        case "math":
+          wrapMath();
+          break;
+        case "link":
+          insertLink();
           break;
       }
     });

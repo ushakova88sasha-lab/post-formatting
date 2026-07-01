@@ -3,15 +3,10 @@ import re
 
 import markdown
 
-# Rich Markdown Telegram: ![](url) или ![](url "подпись")
 IMAGE_RE = re.compile(
     r'!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"([^"]*)")?\)',
     re.IGNORECASE,
 )
-
-
-def _preprocess_strikethrough(text: str) -> str:
-    return re.sub(r"~~([^~\n]+?)~~", r"<del>\1</del>", text)
 
 
 def _preprocess_images(text: str) -> str:
@@ -31,9 +26,19 @@ def _preprocess_images(text: str) -> str:
     return IMAGE_RE.sub(repl, text)
 
 
+def _preprocess_rich_inline(text: str) -> str:
+    """Telegram Rich Markdown → HTML для превью."""
+    text = re.sub(r"\$\$(.+?)\$\$", r'<div class="tg-math-block">\1</div>', text, flags=re.DOTALL)
+    text = re.sub(r"(?<!\$)\$([^$\n]+?)\$(?!\$)", r'<span class="tg-math">\1</span>', text)
+    text = re.sub(r"\|\|([^|\n]+?)\|\|", r'<span class="tg-spoiler">\1</span>', text)
+    text = re.sub(r"==([^=\n]+?)==", r'<mark class="tg-mark">\1</mark>', text)
+    text = re.sub(r"~~([^~\n]+?)~~", r"<s>\1</s>", text)
+    return text
+
+
 def _markdown_to_html(text: str) -> str:
     text = _preprocess_images(text)
-    text = _preprocess_strikethrough(text)
+    text = _preprocess_rich_inline(text)
     return markdown.markdown(
         text,
         extensions=["fenced_code", "nl2br", "sane_lists"],
@@ -50,24 +55,28 @@ def _normalize_inline_tags(html_output: str) -> str:
     html_output = re.sub(r"</em>", "</i>", html_output)
     html_output = re.sub(r"<del>", "<s>", html_output)
     html_output = re.sub(r"</del>", "</s>", html_output)
+    html_output = re.sub(r"<ins>", "<u>", html_output)
+    html_output = re.sub(r"</ins>", "</u>", html_output)
     return html_output
 
 
+ALLOWED_TAG_RE = re.compile(
+    r"<(/?)(?:figure|figcaption|img|div|mark|span|h[1-3]|b|i|u|s|sub|sup|code|pre|a)"
+    r'(?:\s[^>]*)?>',
+    re.IGNORECASE,
+)
+
+
 def preview_html(text: str) -> str:
-    """HTML для превью в браузере (экранированный контент внутри тегов)."""
+    """HTML для превью в браузере."""
     if not text.strip():
         return "<p class='empty'>Начните вводить текст…</p>"
 
     raw_html = _normalize_inline_tags(_markdown_to_html(text))
-    allowed = re.compile(
-        r"<(/?)(?:figure|figcaption|img|h[1-3]|b|i|u|s|code|pre|a|tg-spoiler)"
-        r'(?:\s[^>]*)?>',
-        re.IGNORECASE,
-    )
 
     parts = []
     last = 0
-    for match in allowed.finditer(raw_html):
+    for match in ALLOWED_TAG_RE.finditer(raw_html):
         if match.start() > last:
             parts.append(html.escape(raw_html[last : match.start()]))
         tag = match.group(0)
@@ -75,6 +84,14 @@ def preview_html(text: str) -> str:
             safe = re.sub(
                 r'src="([^"]*)"',
                 lambda m: f'src="{html.escape(m.group(1), quote=True)}"',
+                tag,
+                flags=re.IGNORECASE,
+            )
+            parts.append(safe)
+        elif tag.lower().startswith("<a "):
+            safe = re.sub(
+                r'href="([^"]*)"',
+                lambda m: f'href="{html.escape(m.group(1), quote=True)}"',
                 tag,
                 flags=re.IGNORECASE,
             )

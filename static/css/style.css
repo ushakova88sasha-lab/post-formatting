@@ -502,6 +502,59 @@ select {
   overflow-x: auto;
 }
 .tg-message pre code { background: none; padding: 0; }
+.fmt-btn u {
+  text-decoration: underline;
+}
+
+.fmt-btn[data-action="marker"] {
+  background: rgba(255, 235, 59, 0.25);
+  color: #e6d96a;
+  font-weight: 700;
+}
+
+.tg-message u { text-decoration: underline; }
+.tg-message sub { font-size: 0.75em; vertical-align: sub; }
+.tg-message sup { font-size: 0.75em; vertical-align: super; }
+
+.tg-message mark.tg-mark,
+.tg-message .tg-mark {
+  background: rgba(255, 235, 59, 0.35);
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: 2px;
+}
+
+.tg-message .tg-spoiler {
+  background: #3d4452;
+  color: #3d4452;
+  border-radius: 4px;
+  padding: 0 0.25em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tg-message .tg-spoiler:hover,
+.tg-message .tg-spoiler.revealed {
+  color: var(--text);
+  background: #3d4452;
+}
+
+.tg-message .tg-math {
+  font-family: "Times New Roman", Georgia, serif;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.tg-message .tg-math-block {
+  font-family: "Times New Roman", Georgia, serif;
+  font-style: italic;
+  text-align: center;
+  margin: 0.6rem 0;
+  padding: 0.4rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+}
+
 .tg-message a { color: #6ab2f2; }
 
 .tg-image-block {
