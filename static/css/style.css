@@ -500,6 +500,44 @@ select {
   word-wrap: break-word;
 }
 
+.panel-header-hint {
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: 0.15rem;
+}
+
+.tg-message.tg-editable {
+  cursor: text;
+  transition: box-shadow 0.15s ease;
+}
+
+.tg-message.tg-editable:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(106, 178, 242, 0.45);
+}
+
+.tg-message.tg-editable:empty::before,
+.tg-message.tg-editable[data-empty="1"]::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  font-style: italic;
+  pointer-events: none;
+}
+
+.tg-message.tg-editable[contenteditable="true"] .tg-spoiler {
+  color: inherit;
+  background: rgba(61, 68, 82, 0.55);
+  pointer-events: none;
+}
+
+.tg-message.tg-editable figure,
+.tg-message.tg-editable video,
+.tg-message.tg-editable audio {
+  pointer-events: none;
+  user-select: none;
+}
+
 .tg-message .empty {
   color: var(--text-muted);
   font-style: italic;

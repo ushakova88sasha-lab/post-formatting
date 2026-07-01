@@ -243,13 +243,18 @@ async function selectPost(id) {
   if (window.editorToolbar) {
     window.editorToolbar.setToolbarEnabled(!isPublished);
   }
+  if (window.previewEditor) {
+    window.previewEditor.setEditable(!isPublished);
+  }
 
   showEditor(true);
   renderPostList();
   updatePreview();
 }
 
-async function updatePreview() {
+async function updatePreview(force = false) {
+  if (!force && window.previewEditor?.isEditing()) return;
+
   const content = document.getElementById("post-content").value;
   try {
     const data = await api("/api/posts/preview", {
@@ -257,11 +262,19 @@ async function updatePreview() {
       body: JSON.stringify({ content }),
     });
     if (data) {
-      document.getElementById("preview-content").innerHTML = data.html;
+      if (window.previewEditor) {
+        window.previewEditor.setHtml(data.html);
+      } else {
+        document.getElementById("preview-content").innerHTML = data.html;
+      }
     }
   } catch {
-    document.getElementById("preview-content").innerHTML =
-      '<div class="tg-message"><p class="empty">Ошибка превью</p></div>';
+    const errorHtml = '<div class="tg-message tg-rich"><p class="empty">Ошибка превью</p></div>';
+    if (window.previewEditor) {
+      window.previewEditor.setHtml(errorHtml);
+    } else {
+      document.getElementById("preview-content").innerHTML = errorHtml;
+    }
   }
 }
 
@@ -367,9 +380,20 @@ async function init() {
   }
 }
 
+window.refreshPreview = function () {
+  clearTimeout(previewTimer);
+  return updatePreview(true);
+};
+
 document.getElementById("post-content").addEventListener("input", () => {
+  if (window.previewEditor?.isEditing()) return;
   clearTimeout(previewTimer);
   previewTimer = setTimeout(updatePreview, 300);
+});
+
+window.addEventListener("preview-editor:blur", () => {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 50);
 });
 
 document.getElementById("new-post-btn").addEventListener("click", createPost);

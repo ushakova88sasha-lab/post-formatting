@@ -6,8 +6,17 @@
   const CENTER_BLOCK_RE =
     /^(?:<aside>|<pullquote>|<p style="text-align:\s*center">)([\s\S]*)(?:<\/aside>|<\/pullquote>|<\/p>)$/i;
 
+  function notifyContentChange(textarea) {
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    window.refreshPreview?.();
+  }
+
   function getTextarea() {
-    return document.getElementById("post-content");
+    const el = document.getElementById("post-content");
+    if (el && !el.readOnly) {
+      window.previewEditor?.syncToTextarea();
+    }
+    return el;
   }
 
   function getLinesRange(textarea) {
@@ -48,7 +57,7 @@
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
     textarea.setSelectionRange(start, start + newBlock.length);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   function applyBulletList() {
@@ -125,7 +134,7 @@
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
     textarea.setSelectionRange(start, start + newBlock.length);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   function wrapSelection(before, after) {
@@ -145,7 +154,7 @@
     const cursorEnd = cursorStart + inner.length;
     textarea.setSelectionRange(cursorStart, cursorEnd);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   function insertBlockAtCursor(block) {
@@ -172,7 +181,7 @@
     const pos = before.length + insertion.length;
     textarea.setSelectionRange(pos, pos);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   function buildMediaMarkdown(url, caption) {
@@ -202,7 +211,7 @@
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
     textarea.setSelectionRange(start, start + newBlock.length);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   async function insertDetails() {
@@ -247,7 +256,7 @@
     const pos = start + link.length;
     textarea.setSelectionRange(pos, pos);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   function wrapMath() {
@@ -262,7 +271,7 @@
     textarea.value = textarea.value.substring(0, start) + "$" + inner + "$" + textarea.value.substring(end);
     textarea.setSelectionRange(start + 1, start + 1 + inner.length);
     textarea.focus();
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    notifyContentChange(textarea);
   }
 
   function showMediaCaptionDialog({ url, kind, filename }) {
