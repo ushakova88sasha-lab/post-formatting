@@ -118,7 +118,7 @@
     return Boolean(savedRange && !savedRange.collapsed);
   }
 
-  function clearEmptyPlaceholder(messageEl) {
+  function dismissPlaceholder(messageEl) {
     if (!messageEl) return;
 
     messageEl.querySelector("p.empty")?.remove();
@@ -128,11 +128,7 @@
       messageEl.textContent = "";
     }
 
-    if (!messageEl.textContent.trim() && messageEl.children.length === 0) {
-      messageEl.dataset.empty = "1";
-    } else {
-      messageEl.removeAttribute("data-empty");
-    }
+    messageEl.removeAttribute("data-empty");
   }
 
   function updateEmptyState(messageEl) {
@@ -177,15 +173,15 @@
 
     messageEl.addEventListener("focus", () => {
       focused = true;
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
     });
 
     messageEl.addEventListener("keydown", () => {
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
     });
 
     messageEl.addEventListener("beforeinput", () => {
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
     });
 
     messageEl.addEventListener("blur", () => {
@@ -195,6 +191,7 @@
         syncToTextarea({ force: true });
       }
       dirty = false;
+      updateEmptyState(messageEl);
       window.dispatchEvent(new CustomEvent("left-editor:blur"));
     });
 
@@ -204,7 +201,6 @@
     messageEl.addEventListener("input", () => {
       if (!editable) return;
       dirty = true;
-      clearEmptyPlaceholder(messageEl);
       updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
@@ -333,7 +329,7 @@
     const messageEl = getMessage();
     if (!messageEl) return false;
 
-    clearEmptyPlaceholder(messageEl);
+    dismissPlaceholder(messageEl);
 
     if (!restoreSelection()) {
       messageEl.focus();
@@ -396,7 +392,7 @@
 
     if (savedRange) {
       messageEl.focus();
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
       const sel = window.getSelection();
       if (sel) {
         sel.removeAllRanges();
@@ -414,7 +410,7 @@
 
     if (focused || messageEl === document.activeElement) {
       messageEl.focus();
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
       document.execCommand("insertText", false, text);
       saveSelection();
       dirty = true;

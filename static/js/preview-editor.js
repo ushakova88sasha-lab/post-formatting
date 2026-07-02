@@ -257,7 +257,7 @@
       .trimEnd();
   }
 
-  function clearEmptyPlaceholder(messageEl) {
+  function dismissPlaceholder(messageEl) {
     if (!messageEl) return;
 
     messageEl.querySelector("p.empty")?.remove();
@@ -267,11 +267,7 @@
       messageEl.textContent = "";
     }
 
-    if (!messageEl.textContent.trim() && messageEl.children.length === 0) {
-      messageEl.dataset.empty = "1";
-    } else {
-      messageEl.removeAttribute("data-empty");
-    }
+    messageEl.removeAttribute("data-empty");
   }
 
   function updateEmptyState(messageEl) {
@@ -405,15 +401,15 @@
 
     messageEl.addEventListener("focus", () => {
       focused = true;
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
     });
 
     messageEl.addEventListener("keydown", () => {
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
     });
 
     messageEl.addEventListener("beforeinput", () => {
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
     });
 
     messageEl.addEventListener("blur", () => {
@@ -421,6 +417,7 @@
       savePreviewSelection();
       syncToTextarea();
       dirty = false;
+      updateEmptyState(messageEl);
       window.dispatchEvent(new CustomEvent("preview-editor:blur"));
     });
 
@@ -430,7 +427,6 @@
     messageEl.addEventListener("input", () => {
       if (!editable) return;
       dirty = true;
-      clearEmptyPlaceholder(messageEl);
       updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(syncToTextarea, 200);
@@ -478,7 +474,7 @@
     const messageEl = getMessage();
     if (!messageEl) return false;
 
-    clearEmptyPlaceholder(messageEl);
+    dismissPlaceholder(messageEl);
 
     if (!restoreSelection()) {
       messageEl.focus();
@@ -554,7 +550,7 @@
 
     if (savedPreviewRange) {
       messageEl.focus();
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
 
       const sel = window.getSelection();
       if (sel) {
@@ -573,7 +569,7 @@
 
     if (focused || messageEl === document.activeElement) {
       messageEl.focus();
-      clearEmptyPlaceholder(messageEl);
+      dismissPlaceholder(messageEl);
       document.execCommand("insertText", false, text);
       savePreviewSelection();
       dirty = true;
