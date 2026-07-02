@@ -244,6 +244,10 @@ async function selectPost(id) {
   document.getElementById("schedule-btn").disabled = isPublished;
   document.getElementById("save-btn").disabled = isPublished;
   window.postButtons?.setReadOnly(isPublished, isPublished);
+  window.leftEditor?.setEditable(!isPublished);
+  if (window.leftEditor?.isVisualMode?.()) {
+    window.leftEditor.refreshFromMarkdown?.();
+  }
   if (window.editorToolbar) {
     window.editorToolbar.setToolbarEnabled(!isPublished);
   }
@@ -258,6 +262,7 @@ async function selectPost(id) {
 
 async function updatePreview(force = false) {
   if (!force && window.previewEditor?.isEditing()) return;
+  if (!force && window.leftEditor?.isEditing?.()) return;
 
   const content = document.getElementById("post-content").value;
   try {
@@ -483,8 +488,14 @@ window.refreshPreview = function () {
 
 document.getElementById("post-content").addEventListener("input", () => {
   if (window.previewEditor?.isEditing()) return;
+  if (window.leftEditor?.isVisualMode?.()) return;
   clearTimeout(previewTimer);
   previewTimer = setTimeout(updatePreview, 300);
+});
+
+window.addEventListener("left-editor:blur", () => {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 50);
 });
 
 window.addEventListener("preview-editor:blur", () => {

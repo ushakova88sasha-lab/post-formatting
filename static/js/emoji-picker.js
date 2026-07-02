@@ -25,6 +25,9 @@
   }
 
   function insertIntoEditor(text) {
+    if (window.leftEditor?.insertText?.(text)) {
+      return;
+    }
     if (window.previewEditor?.insertText?.(text)) {
       window.refreshPreview?.();
       return;
@@ -33,7 +36,11 @@
     const textarea = document.getElementById("post-content");
     if (!textarea || textarea.readOnly) return;
 
-    window.previewEditor?.syncToTextarea?.();
+    if (window.leftEditor?.isVisualMode?.()) {
+      window.leftEditor.syncToTextarea?.();
+    } else {
+      window.previewEditor?.syncToTextarea?.();
+    }
 
     const start = textarea.selectionStart ?? textarea.value.length;
     const end = textarea.selectionEnd ?? start;

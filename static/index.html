@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=16">
+  <link rel="stylesheet" href="/static/css/style.css?v=17">
 </head>
 <body>
   <header class="header">
@@ -71,6 +71,10 @@
             <div class="panel panel-editor">
             <div class="panel-header panel-header-editor">
               <span>Редактор поста</span>
+              <div class="editor-mode-toggle" role="tablist" aria-label="Режим редактора">
+                <button type="button" class="editor-mode-btn" data-mode="visual" role="tab">Визуально</button>
+                <button type="button" class="editor-mode-btn active" data-mode="markdown" role="tab">Markdown</button>
+              </div>
             </div>
             <div class="editor-toolbar" id="editor-toolbar">
               <div class="fmt-group">
@@ -146,7 +150,12 @@
                 <button type="button" class="fmt-btn" data-action="details" title="Скрывающийся блок">▼ Скрыть</button>
               </div>
             </div>
-            <div class="panel-body">
+            <div class="panel-body editor-panel-body">
+              <div id="editor-visual" class="editor-visual hidden">
+                <div id="editor-visual-content" class="editor-visual-content">
+                  <div class="tg-message tg-rich"><p class="empty">Начните вводить текст…</p></div>
+                </div>
+              </div>
               <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
             </div>
           </div>
@@ -232,12 +241,13 @@
 
   <script src="/static/js/auth-utils.js?v=5"></script>
   <script src="/static/js/modals.js?v=5"></script>
-  <script src="/static/js/editor-toolbar.js?v=10"></script>
   <script src="/static/js/time-moscow.js?v=5"></script>
   <script src="/static/js/preview-editor.js?v=3"></script>
+  <script src="/static/js/left-editor.js?v=1"></script>
+  <script src="/static/js/editor-toolbar.js?v=11"></script>
   <script src="/static/js/emoji-data.js?v=1"></script>
-  <script src="/static/js/emoji-picker.js?v=3"></script>
+  <script src="/static/js/emoji-picker.js?v=4"></script>
   <script src="/static/js/post-buttons.js?v=3"></script>
-  <script src="/static/js/app.js?v=13"></script>
+  <script src="/static/js/app.js?v=14"></script>
 </body>
 </html>

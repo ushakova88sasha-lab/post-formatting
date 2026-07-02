@@ -17,6 +17,9 @@
 
   function notifyContentChange(textarea) {
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    if (window.leftEditor?.isVisualMode?.()) {
+      window.leftEditor.refreshFromMarkdown?.();
+    }
     window.refreshPreview?.();
   }
 
@@ -33,7 +36,9 @@
     const el = document.getElementById("post-content");
     if (!el || el.readOnly) return el;
 
-    if (window.previewEditor?.isEditing?.()) {
+    if (window.leftEditor?.isVisualMode?.()) {
+      window.leftEditor.syncToTextarea?.();
+    } else if (window.previewEditor?.isEditing?.()) {
       window.previewEditor.syncToTextarea();
     }
     return el;
@@ -64,6 +69,10 @@
   }
 
   function tryPreviewFormat(action) {
+    if (window.leftEditor?.applyFormat?.(action)) {
+      return true;
+    }
+
     const previewEditor = window.previewEditor;
     if (!previewEditor?.hasSelection?.()) return false;
 

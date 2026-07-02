@@ -384,8 +384,75 @@ select {
 
 /* Toolbar форматирования */
 .panel-editor .panel-header-editor {
+  gap: 0.75rem;
   border-bottom: none;
   padding-bottom: 0.4rem;
+}
+
+.editor-mode-toggle {
+  display: inline-flex;
+  padding: 0.15rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  gap: 0.15rem;
+}
+
+.editor-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.editor-mode-btn:hover {
+  color: var(--text);
+}
+
+.editor-mode-btn.active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.editor-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+
+.editor-visual {
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-visual-content {
+  min-height: 100%;
+  background: #1c1f28;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+}
+
+.editor-visual-content .tg-message {
+  min-height: 280px;
+  outline: none;
+}
+
+.editor-visual-content .tg-message.tg-editable:empty::before,
+.editor-visual-content .tg-message.tg-editable:not(:has(*))::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.textarea.hidden {
+  display: none;
 }
 
 .editor-toolbar {
