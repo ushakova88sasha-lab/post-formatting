@@ -68,6 +68,52 @@
     savedTextareaSelection = { start, end };
   }
 
+  function tryClearVisualFormat() {
+    if (window.leftEditor?.clearFormatting?.()) {
+      return true;
+    }
+    if (window.previewEditor?.clearFormatting?.()) {
+      return true;
+    }
+    return false;
+  }
+
+  function stripMarkdownFormatting(text) {
+    let result = text;
+    result = result.replace(/^#{1,3}\s+/gm, "");
+    result = result.replace(/\*\*([^*]+)\*\*/g, "$1");
+    result = result.replace(/__([^_]+)__/g, "$1");
+    result = result.replace(/_([^_\n]+)_/g, "$1");
+    result = result.replace(/\*([^*\n]+)\*/g, "$1");
+    result = result.replace(/~~([^~]+)~~/g, "$1");
+    result = result.replace(/==([^=]+)==/g, "$1");
+    result = result.replace(/\|\|([^|]+)\|\|/g, "$1");
+    result = result.replace(/`([^`]+)`/g, "$1");
+    result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
+    result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1");
+    result = result.replace(/<\/?(?:u|sub|sup|mark|b|strong|i|em|s|del|ins|aside|pullquote)[^>]*>/gi, "");
+    result = result.replace(/^>\s?/gm, "");
+    result = result.replace(/^[-*+]\s+\[[ xX]\]\s+/gm, "");
+    result = result.replace(/^[-*+]\s+/gm, "");
+    result = result.replace(/^\d+\.\s+/gm, "");
+    result = result.replace(/<details><summary>[\s\S]*?<\/summary>\s*([\s\S]*?)<\/details>/gi, "$1");
+    result = result.replace(/<p style="text-align:\s*center">([\s\S]*?)<\/p>/gi, "$1");
+    return result;
+  }
+
+  function clearMarkdownFormatting() {
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return;
+
+    const { value, start, end } = getLinesRange(textarea);
+    const block = value.substring(start, end);
+    const cleared = stripMarkdownFormatting(block);
+
+    textarea.value = value.substring(0, start) + cleared + value.substring(end);
+    setSelectionRange(textarea, start, start + cleared.length);
+    notifyContentChange(textarea);
+  }
+
   function tryPreviewFormat(action) {
     if (window.leftEditor?.applyFormat?.(action)) {
       return true;
@@ -521,6 +567,12 @@
     }
 
     e.preventDefault();
+    if (action === "clear-format") {
+      if (!tryClearVisualFormat()) {
+        clearMarkdownFormatting();
+      }
+      return;
+    }
     if (tryPreviewFormat(action)) {
       return;
     }

@@ -258,10 +258,34 @@
   }
 
   function clearEmptyPlaceholder(messageEl) {
-    const empty = messageEl.querySelector("p.empty");
-    if (empty) {
-      empty.remove();
+    if (!messageEl) return;
+
+    messageEl.querySelector("p.empty")?.remove();
+
+    const text = (messageEl.textContent || "").trim();
+    if (text === EMPTY_TEXT) {
+      messageEl.textContent = "";
     }
+
+    if (!messageEl.textContent.trim() && messageEl.children.length === 0) {
+      messageEl.dataset.empty = "1";
+    } else {
+      messageEl.removeAttribute("data-empty");
+    }
+  }
+
+  function updateEmptyState(messageEl) {
+    if (!messageEl) return;
+
+    const markdown = messageToMarkdown(messageEl).trim();
+    if (!markdown) {
+      messageEl.dataset.empty = "1";
+      messageEl.querySelector("p.empty")?.remove();
+      return;
+    }
+
+    messageEl.removeAttribute("data-empty");
+    messageEl.querySelector("p.empty")?.remove();
   }
 
   function ensureMessageElement() {
@@ -360,6 +384,12 @@
     messageEl.classList.toggle("tg-editable", editable);
     messageEl.dataset.placeholder = editable ? EMPTY_TEXT : "";
 
+    if (editable && !messageToMarkdown(messageEl).trim()) {
+      messageEl.dataset.empty = "1";
+    } else {
+      messageEl.removeAttribute("data-empty");
+    }
+
     if (!editable) {
       messageEl.removeAttribute("contenteditable");
     }
@@ -378,6 +408,14 @@
       clearEmptyPlaceholder(messageEl);
     });
 
+    messageEl.addEventListener("keydown", () => {
+      clearEmptyPlaceholder(messageEl);
+    });
+
+    messageEl.addEventListener("beforeinput", () => {
+      clearEmptyPlaceholder(messageEl);
+    });
+
     messageEl.addEventListener("blur", () => {
       focused = false;
       savePreviewSelection();
@@ -393,6 +431,7 @@
       if (!editable) return;
       dirty = true;
       clearEmptyPlaceholder(messageEl);
+      updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(syncToTextarea, 200);
     });
@@ -422,23 +461,75 @@
     }
 
     const markdown = messageToMarkdown(messageEl);
-    if (textarea.value === markdown) {
+    const normalized = markdown.trim() === EMPTY_TEXT ? "" : markdown;
+    if (textarea.value === normalized) {
       dirty = false;
       return;
     }
 
-    textarea.value = markdown;
+    textarea.value = normalized;
     dirty = false;
     textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  }
+
+  function clearFormatting() {
+    if (!editable) return false;
+
+    const messageEl = getMessage();
+    if (!messageEl) return false;
+
+    clearEmptyPlaceholder(messageEl);
+
+    if (!restoreSelection()) {
+      messageEl.focus();
+      const range = document.createRange();
+      range.selectNodeContents(messageEl);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+
+    const range = sel.getRangeAt(0);
+    if (!messageEl.contains(range.commonAncestorContainer)) return false;
+
+    const plain = range.toString();
+    if (!plain && range.collapsed) return false;
+
+    range.deleteContents();
+    const textNode = document.createTextNode(plain);
+    range.insertNode(textNode);
+    range.selectNode(textNode);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    savedPreviewRange = range.cloneRange();
+
+    dirty = true;
+    updateEmptyState(messageEl);
+    syncToTextarea();
+    window.refreshPreview?.(true);
+    return true;
   }
 
   function setHtml(html) {
     const root = getRoot();
     if (!root) return;
 
-    root.innerHTML = html;
-    const message = ensureMessageElement();
-    bindMessage(message);
+    const temp = document.createElement("div");
+    temp.innerHTML = html || "";
+    const message = temp.querySelector(".tg-message");
+    const onlyEmpty =
+      message &&
+      message.querySelector("p.empty") &&
+      !messageToMarkdown(message).trim();
+
+    root.innerHTML = onlyEmpty ? '<div class="tg-message tg-rich"></div>' : html;
+    const bound = ensureMessageElement();
+    bindMessage(bound);
+    updateEmptyState(bound);
   }
 
   function setEditable(enabled) {
@@ -515,6 +606,7 @@
       hasSelection,
       applyCommand,
       wrapSelection,
+      clearFormatting,
     };
   }
 

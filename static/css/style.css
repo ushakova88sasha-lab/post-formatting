@@ -591,11 +591,15 @@ select {
   outline: none;
 }
 
-.editor-visual-content .tg-message.tg-editable:empty::before,
-.editor-visual-content .tg-message.tg-editable:not(:has(*))::before {
+.editor-visual-content .tg-message.tg-editable[data-empty="1"]::before {
   content: attr(data-placeholder);
   color: var(--text-muted);
   font-style: italic;
+  pointer-events: none;
+}
+
+.editor-visual-content .tg-message.tg-editable:not([data-empty="1"])::before {
+  content: none;
 }
 
 .textarea.hidden {
@@ -850,12 +854,15 @@ select {
   box-shadow: 0 0 0 2px rgba(106, 178, 242, 0.45);
 }
 
-.tg-message.tg-editable:empty::before,
 .tg-message.tg-editable[data-empty="1"]::before {
   content: attr(data-placeholder);
   color: var(--text-muted);
   font-style: italic;
   pointer-events: none;
+}
+
+.tg-message.tg-editable:not([data-empty="1"])::before {
+  content: none;
 }
 
 .tg-message.tg-editable[contenteditable="true"] .tg-spoiler {

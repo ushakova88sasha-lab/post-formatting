@@ -65,7 +65,7 @@
       return;
     }
 
-    textarea.value = markdown;
+    textarea.value = markdown.trim() === EMPTY_TEXT ? "" : markdown;
     dirty = false;
     textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   }
@@ -119,7 +119,34 @@
   }
 
   function clearEmptyPlaceholder(messageEl) {
-    messageEl?.querySelector("p.empty")?.remove();
+    if (!messageEl) return;
+
+    messageEl.querySelector("p.empty")?.remove();
+
+    const text = (messageEl.textContent || "").trim();
+    if (text === EMPTY_TEXT) {
+      messageEl.textContent = "";
+    }
+
+    if (!messageEl.textContent.trim() && messageEl.children.length === 0) {
+      messageEl.dataset.empty = "1";
+    } else {
+      messageEl.removeAttribute("data-empty");
+    }
+  }
+
+  function updateEmptyState(messageEl) {
+    if (!messageEl) return;
+
+    const markdown = serialize(messageEl).trim();
+    if (!markdown) {
+      messageEl.dataset.empty = "1";
+      messageEl.querySelector("p.empty")?.remove();
+      return;
+    }
+
+    messageEl.removeAttribute("data-empty");
+    messageEl.querySelector("p.empty")?.remove();
   }
 
   function applyEditableState(messageEl) {
@@ -128,6 +155,12 @@
     messageEl.contentEditable = editable ? "true" : "false";
     messageEl.classList.toggle("tg-editable", editable);
     messageEl.dataset.placeholder = editable ? EMPTY_TEXT : "";
+
+    if (editable && !serialize(messageEl).trim()) {
+      messageEl.dataset.empty = "1";
+    } else {
+      messageEl.removeAttribute("data-empty");
+    }
 
     if (!editable) {
       messageEl.removeAttribute("contenteditable");
@@ -144,6 +177,14 @@
 
     messageEl.addEventListener("focus", () => {
       focused = true;
+      clearEmptyPlaceholder(messageEl);
+    });
+
+    messageEl.addEventListener("keydown", () => {
+      clearEmptyPlaceholder(messageEl);
+    });
+
+    messageEl.addEventListener("beforeinput", () => {
       clearEmptyPlaceholder(messageEl);
     });
 
@@ -164,6 +205,7 @@
       if (!editable) return;
       dirty = true;
       clearEmptyPlaceholder(messageEl);
+      updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
         syncToTextarea();
@@ -192,13 +234,22 @@
     const root = getRoot();
     if (!root) return;
 
-    root.innerHTML = html;
-    let message = root.querySelector(".tg-message");
-    if (!message) {
+    const temp = document.createElement("div");
+    temp.innerHTML = html || "";
+    const message = temp.querySelector(".tg-message");
+    const onlyEmpty =
+      message &&
+      message.querySelector("p.empty") &&
+      !serialize(message).trim();
+
+    root.innerHTML = onlyEmpty ? '<div class="tg-message tg-rich"></div>' : html;
+    let bound = root.querySelector(".tg-message");
+    if (!bound) {
       root.innerHTML = '<div class="tg-message tg-rich"></div>';
-      message = root.querySelector(".tg-message");
+      bound = root.querySelector(".tg-message");
     }
-    bindMessage(message);
+    bindMessage(bound);
+    updateEmptyState(bound);
   }
 
   async function refreshFromMarkdown() {
@@ -209,7 +260,7 @@
     const content = textarea.value;
 
     if (!content.trim()) {
-      setVisualHtml('<div class="tg-message tg-rich"><p class="empty">Начните вводить текст…</p></div>');
+      setVisualHtml('<div class="tg-message tg-rich"></div>');
       dirty = false;
       return;
     }
@@ -271,6 +322,48 @@
     sel.addRange(range);
     saveSelection();
     dirty = true;
+    syncToTextarea();
+    window.refreshPreview?.(true);
+    return true;
+  }
+
+  function clearFormatting() {
+    if (!isVisualMode() || !editable) return false;
+
+    const messageEl = getMessage();
+    if (!messageEl) return false;
+
+    clearEmptyPlaceholder(messageEl);
+
+    if (!restoreSelection()) {
+      messageEl.focus();
+      const range = document.createRange();
+      range.selectNodeContents(messageEl);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+
+    const range = sel.getRangeAt(0);
+    if (!messageEl.contains(range.commonAncestorContainer)) return false;
+
+    const plain = range.toString();
+    if (!plain && range.collapsed) return false;
+
+    range.deleteContents();
+    const textNode = document.createTextNode(plain);
+    range.insertNode(textNode);
+    range.selectNode(textNode);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    savedRange = range.cloneRange();
+
+    dirty = true;
+    updateEmptyState(messageEl);
     syncToTextarea();
     window.refreshPreview?.(true);
     return true;
@@ -413,6 +506,7 @@
       refreshFromMarkdown,
       hasSelection,
       applyFormat,
+      clearFormatting,
       insertText,
     };
   }

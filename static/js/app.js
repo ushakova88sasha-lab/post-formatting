@@ -393,6 +393,16 @@ async function updatePreview(force = false) {
 
   const content = document.getElementById("post-content").value;
   try {
+    if (!content.trim()) {
+      const emptyHtml = '<div class="tg-message tg-rich"></div>';
+      if (window.previewEditor) {
+        window.previewEditor.setHtml(emptyHtml);
+      } else {
+        document.getElementById("preview-content").innerHTML = emptyHtml;
+      }
+      return;
+    }
+
     const data = await api("/api/posts/preview", {
       method: "POST",
       body: JSON.stringify({ content }),

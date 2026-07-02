@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=21">
+  <link rel="stylesheet" href="/static/css/style.css?v=23">
 </head>
 <body>
   <header class="header">
@@ -134,6 +134,7 @@
                 <button type="button" class="fmt-btn fmt-btn-icon" data-action="italic" title="Курсив"><i>I</i></button>
                 <button type="button" class="fmt-btn fmt-btn-icon" data-action="strike" title="Зачёркнутый"><s>S</s></button>
                 <button type="button" class="fmt-btn fmt-btn-icon" data-action="underline" title="Подчёркнутый"><u>U</u></button>
+                <button type="button" class="fmt-btn fmt-btn-icon" data-action="clear-format" title="Сбросить форматирование">Tx</button>
               </div>
               <div class="fmt-separator"></div>
               <div class="fmt-group">
@@ -199,7 +200,7 @@
             <div class="panel-body editor-panel-body">
               <div id="editor-visual" class="editor-visual">
                 <div id="editor-visual-content" class="editor-visual-content">
-                  <div class="tg-message tg-rich"><p class="empty">Начните вводить текст…</p></div>
+                  <div class="tg-message tg-rich"></div>
                 </div>
               </div>
               <textarea class="textarea hidden" id="post-content" placeholder="Введите текст поста…"></textarea>
@@ -211,7 +212,7 @@
               <div class="tg-preview-wrap">
                 <div class="tg-channel-name" id="channel-label">Публикация в канал</div>
                 <div id="preview-content">
-                  <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
+                  <div class="tg-message"></div>
                 </div>
                 <div id="preview-buttons" class="tg-inline-keyboard hidden"></div>
               </div>
@@ -298,9 +299,9 @@
   <script src="/static/js/auth-utils.js?v=5"></script>
   <script src="/static/js/modals.js?v=5"></script>
   <script src="/static/js/time-moscow.js?v=5"></script>
-  <script src="/static/js/preview-editor.js?v=3"></script>
-  <script src="/static/js/left-editor.js?v=3"></script>
-  <script src="/static/js/editor-toolbar.js?v=11"></script>
+  <script src="/static/js/preview-editor.js?v=4"></script>
+  <script src="/static/js/left-editor.js?v=4"></script>
+  <script src="/static/js/editor-toolbar.js?v=12"></script>
   <script src="/static/js/emoji-data.js?v=1"></script>
   <script src="/static/js/emoji-picker.js?v=4"></script>
   <script src="/static/js/post-buttons.js?v=3"></script>
