@@ -18,6 +18,9 @@
   --warning: #f39c12;
   --radius: 10px;
   --font: "Inter", system-ui, -apple-system, sans-serif;
+  --scrollbar-size: 5px;
+  --scrollbar-thumb: rgba(154, 163, 181, 0.18);
+  --scrollbar-thumb-hover: rgba(154, 163, 181, 0.32);
 }
 
 body {
@@ -290,6 +293,63 @@ select {
   margin: 0 -0.25rem;
   padding: 0 0.25rem;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.post-list-scroll::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+}
+
+.post-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.post-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+
+.post-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.main,
+.settings-view,
+.panel-body-preview,
+.editor-visual-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.main::-webkit-scrollbar,
+.settings-view::-webkit-scrollbar,
+.panel-body-preview::-webkit-scrollbar,
+.editor-visual-content::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+.main::-webkit-scrollbar-track,
+.settings-view::-webkit-scrollbar-track,
+.panel-body-preview::-webkit-scrollbar-track,
+.editor-visual-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main::-webkit-scrollbar-thumb,
+.settings-view::-webkit-scrollbar-thumb,
+.panel-body-preview::-webkit-scrollbar-thumb,
+.editor-visual-content::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+
+.main::-webkit-scrollbar-thumb:hover,
+.settings-view::-webkit-scrollbar-thumb:hover,
+.panel-body-preview::-webkit-scrollbar-thumb:hover,
+.editor-visual-content::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .post-list-sentinel {
