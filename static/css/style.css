@@ -230,7 +230,66 @@ select {
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.post-list-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.post-filter-btn {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.post-filter-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.post-filter-btn.active {
+  background: rgba(52, 152, 219, 0.14);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.post-list-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+}
+
+.post-list-loader {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.post-list-loader.hidden {
+  display: none;
 }
 
 .sidebar h2 {

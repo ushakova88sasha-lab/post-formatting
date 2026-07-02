@@ -5,6 +5,11 @@ let posts = [];
 let retentionDays = 7;
 let previewTimer = null;
 let currentView = "posts";
+let postFilter = "draft";
+let postsOffset = 0;
+let hasMorePosts = true;
+let loadingPosts = false;
+const POSTS_PAGE_SIZE = 10;
 
 async function api(path, options = {}) {
   return authFetch(path, options, { redirectOn401: true });
@@ -60,7 +65,9 @@ function updateRetentionHint() {
 function renderPostList() {
   const list = document.getElementById("post-list");
   if (!posts.length) {
-    list.innerHTML = '<li style="color:var(--text-muted);font-size:0.85rem;">Нет постов</li>';
+    const emptyLabel =
+      postFilter === "published" ? "Нет опубликованных постов" : "Нет черновиков";
+    list.innerHTML = `<li style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem 0.75rem;">${emptyLabel}</li>`;
     return;
   }
 
@@ -76,10 +83,22 @@ function renderPostList() {
     </li>`
     )
     .join("");
+}
 
-  list.querySelectorAll(".post-item").forEach((el) => {
-    el.addEventListener("click", () => selectPost(Number(el.dataset.id)));
+function setPostFilter(filter) {
+  if (postFilter === filter) return;
+  postFilter = filter;
+  document.querySelectorAll(".post-filter-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.filter === filter);
   });
+  return loadPosts({ reset: true, selectFirst: true });
+}
+
+function setPostListLoading(isLoading) {
+  const loader = document.getElementById("post-list-loader");
+  if (loader) {
+    loader.classList.toggle("hidden", !isLoading);
+  }
 }
 
 function escapeHtml(text) {
@@ -209,16 +228,68 @@ function setChannelLabel(channel) {
   label.textContent = channel ? `Публикация в канал ${channel}` : "Публикация в канал";
 }
 
-async function loadPosts() {
-  const data = await api("/api/posts");
-  if (Array.isArray(data)) {
-    posts = data;
-  } else {
-    posts = Array.isArray(data?.posts) ? data.posts : [];
-    retentionDays = data?.retention_days ?? 7;
+async function loadPosts({ reset = false, selectFirst = false } = {}) {
+  if (loadingPosts) return;
+  if (!reset && !hasMorePosts) return;
+
+  if (reset) {
+    postsOffset = 0;
+    posts = [];
+    hasMorePosts = true;
+    renderPostList();
   }
-  updateRetentionHint();
-  renderPostList();
+
+  loadingPosts = true;
+  setPostListLoading(true);
+
+  try {
+    const params = new URLSearchParams({
+      filter: postFilter,
+      offset: String(postsOffset),
+      limit: String(POSTS_PAGE_SIZE),
+    });
+    const data = await api(`/api/posts?${params.toString()}`);
+    if (!data) return;
+
+    const batch = Array.isArray(data?.posts) ? data.posts : [];
+    retentionDays = data?.retention_days ?? retentionDays;
+    hasMorePosts = Boolean(data?.has_more);
+    postsOffset += batch.length;
+    posts = reset ? batch : [...posts, ...batch];
+
+    updateRetentionHint();
+    renderPostList();
+
+    if (selectFirst) {
+      if (posts.length) {
+        await selectPost(posts[0].id);
+      } else {
+        currentPostId = null;
+        showEditor(false);
+      }
+    }
+  } finally {
+    loadingPosts = false;
+    setPostListLoading(false);
+  }
+}
+
+async function reloadPostList({ keepSelection = true } = {}) {
+  const selectedId = keepSelection ? currentPostId : null;
+  await loadPosts({ reset: true });
+
+  if (selectedId && posts.some((post) => post.id === selectedId)) {
+    renderPostList();
+    return;
+  }
+
+  if (posts.length) {
+    await selectPost(posts[0].id);
+    return;
+  }
+
+  currentPostId = null;
+  showEditor(false);
 }
 
 async function selectPost(id) {
@@ -387,7 +458,7 @@ async function createPost() {
     body: JSON.stringify({ title: "Новый пост", content: "" }),
   });
   if (!post) return;
-  await loadPosts();
+  await reloadPostList({ keepSelection: false });
   await selectPost(post.id);
 }
 
@@ -408,7 +479,7 @@ async function savePost() {
     body: JSON.stringify({ title, content, buttons }),
   });
 
-  await loadPosts();
+  await reloadPostList();
   showAlert("Сохранено", "success");
 }
 
@@ -424,13 +495,19 @@ async function publishPost() {
   try {
     await savePost();
     await api(`/api/posts/${currentPostId}/publish`, { method: "POST" });
-    await loadPosts();
+    postFilter = "published";
+    document.querySelectorAll(".post-filter-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.filter === "published");
+    });
+    await loadPosts({ reset: true });
     await selectPost(currentPostId);
     showAlert("Пост опубликован!", "success");
   } catch (err) {
     showAlert(err.message);
-    await loadPosts();
-    await selectPost(currentPostId);
+    await reloadPostList();
+    if (currentPostId) {
+      await selectPost(currentPostId);
+    }
   }
 }
 
@@ -450,7 +527,7 @@ async function schedulePost() {
       method: "POST",
       body: JSON.stringify({ scheduled_at }),
     });
-    await loadPosts();
+    await reloadPostList();
     await selectPost(currentPostId);
     showAlert("Пост запланирован", "success");
   } catch (err) {
@@ -475,10 +552,8 @@ async function init() {
   }
 
   try {
-    await loadPosts();
-    if (posts.length) {
-      await selectPost(posts[0].id);
-    } else {
+    await loadPosts({ reset: true, selectFirst: true });
+    if (!posts.length) {
       showEditor(false);
     }
   } catch (err) {
@@ -519,6 +594,29 @@ document.getElementById("copy-markdown-btn").addEventListener("click", copyPostM
 
 document.querySelectorAll(".sidebar-tab").forEach((tab) => {
   tab.addEventListener("click", () => showView(tab.dataset.view));
+});
+
+document.querySelectorAll(".post-filter-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setPostFilter(btn.dataset.filter).catch((err) => {
+      showAlert(err.message || "Не удалось загрузить посты");
+    });
+  });
+});
+
+document.getElementById("post-list").addEventListener("click", (event) => {
+  const item = event.target.closest(".post-item");
+  if (!item?.dataset?.id) return;
+  selectPost(Number(item.dataset.id));
+});
+
+document.getElementById("post-list-scroll")?.addEventListener("scroll", () => {
+  const container = document.getElementById("post-list-scroll");
+  if (!container || loadingPosts || !hasMorePosts) return;
+  const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
+  if (remaining < 48) {
+    loadPosts().catch((err) => showAlert(err.message || "Не удалось загрузить посты"));
+  }
 });
 
 document.getElementById("settings-form").addEventListener("submit", saveTelegramSettings);

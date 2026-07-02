@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -74,6 +74,26 @@ def post_to_dict(post: Post, db: Session) -> dict:
     }
 
 
+def post_list_item_to_dict(post: Post) -> dict:
+    return {
+        "id": post.id,
+        "title": post.title,
+        "display_title": display_post_title(post.title, post.content),
+        "status": post.status,
+        "scheduled_at": _utc_iso(post.scheduled_at),
+        "published_at": _utc_iso(post.published_at),
+        "updated_at": _utc_iso(post.updated_at),
+    }
+
+
+def _apply_post_filter(query, status_filter: str | None):
+    if status_filter == "published":
+        return query.filter(Post.status == PostStatus.PUBLISHED.value)
+    if status_filter == "draft":
+        return query.filter(Post.status != PostStatus.PUBLISHED.value)
+    return query
+
+
 def _sync_generic_titles(posts: list[Post], db: Session) -> None:
     changed = False
     for post in posts:
@@ -86,13 +106,36 @@ def _sync_generic_titles(posts: list[Post], db: Session) -> None:
 
 
 @router.get("")
-async def list_posts(db: Session = Depends(get_db), _: str = Depends(require_user)):
+async def list_posts(
+    db: Session = Depends(get_db),
+    _: str = Depends(require_user),
+    status_filter: str | None = Query(default=None, alias="filter", pattern="^(draft|published)$"),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=50),
+):
     purge_expired_posts(db)
-    posts = db.query(Post).order_by(Post.updated_at.desc()).all()
+
+    base_query = db.query(Post)
+    filtered_query = _apply_post_filter(base_query, status_filter)
+    total = filtered_query.count()
+
+    posts = (
+        filtered_query.order_by(Post.updated_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     _sync_generic_titles(posts, db)
+
+    loaded = len(posts)
     return {
-        "posts": [post_to_dict(p, db) for p in posts],
+        "posts": [post_list_item_to_dict(p) for p in posts],
         "retention_days": settings.post_retention_days,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + loaded < total,
+        "filter": status_filter,
     }
 
 
