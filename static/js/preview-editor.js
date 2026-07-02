@@ -276,6 +276,83 @@
     return message;
   }
 
+  function restoreSelection() {
+    const messageEl = getMessage();
+    if (!messageEl) return false;
+
+    if (savedPreviewRange) {
+      messageEl.focus();
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedPreviewRange);
+      return true;
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+
+    const range = sel.getRangeAt(0);
+    return messageEl.contains(range.commonAncestorContainer);
+  }
+
+  function hasSelection() {
+    const messageEl = getMessage();
+    if (!messageEl) return false;
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (messageEl.contains(range.commonAncestorContainer) && !range.collapsed) {
+        return true;
+      }
+    }
+
+    return Boolean(savedPreviewRange && !savedPreviewRange.collapsed);
+  }
+
+  function applyCommand(command) {
+    if (!restoreSelection()) return false;
+
+    document.execCommand(command, false, null);
+    savePreviewSelection();
+    dirty = true;
+    syncToTextarea();
+    window.refreshPreview?.();
+    return true;
+  }
+
+  function wrapSelection(tagName, className) {
+    if (!restoreSelection()) return false;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return false;
+
+    const el = document.createElement(tagName);
+    if (className) {
+      el.className = className;
+    }
+
+    try {
+      range.surroundContents(el);
+    } catch {
+      const fragment = range.extractContents();
+      el.appendChild(fragment);
+      range.insertNode(el);
+      range.selectNodeContents(el);
+    }
+
+    sel.removeAllRanges();
+    sel.addRange(range);
+    savePreviewSelection();
+    dirty = true;
+    syncToTextarea();
+    window.refreshPreview?.();
+    return true;
+  }
+
   function applyEditableState(messageEl) {
     if (!messageEl) return;
 
@@ -435,6 +512,9 @@
       setEditable,
       insertText,
       messageToMarkdown,
+      hasSelection,
+      applyCommand,
+      wrapSelection,
     };
   }
 

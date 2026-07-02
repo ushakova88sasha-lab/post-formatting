@@ -6,23 +6,89 @@
   const CENTER_BLOCK_RE =
     /^(?:<aside>|<pullquote>|<p style="text-align:\s*center">)([\s\S]*)(?:<\/aside>|<\/pullquote>|<\/p>)$/i;
 
+  let savedTextareaSelection = null;
+
+  const PREVIEW_COMMANDS = {
+    bold: "bold",
+    italic: "italic",
+    strike: "strikeThrough",
+    underline: "underline",
+  };
+
   function notifyContentChange(textarea) {
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     window.refreshPreview?.();
   }
 
+  function saveTextareaSelection() {
+    const textarea = document.getElementById("post-content");
+    if (!textarea || textarea.readOnly) return;
+    savedTextareaSelection = {
+      start: textarea.selectionStart,
+      end: textarea.selectionEnd,
+    };
+  }
+
   function getTextarea() {
     const el = document.getElementById("post-content");
-    if (el && !el.readOnly) {
-      window.previewEditor?.syncToTextarea();
+    if (!el || el.readOnly) return el;
+
+    if (window.previewEditor?.isEditing?.()) {
+      window.previewEditor.syncToTextarea();
     }
     return el;
   }
 
-  function getLinesRange(textarea) {
-    const value = textarea.value;
+  function getSelectionRange(textarea) {
+    if (!textarea) return { start: 0, end: 0 };
+
     let start = textarea.selectionStart;
     let end = textarea.selectionEnd;
+
+    if (
+      savedTextareaSelection &&
+      (document.activeElement !== textarea || start === end) &&
+      savedTextareaSelection.start !== savedTextareaSelection.end
+    ) {
+      start = savedTextareaSelection.start;
+      end = savedTextareaSelection.end;
+    }
+
+    return { start, end };
+  }
+
+  function setSelectionRange(textarea, start, end) {
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+    savedTextareaSelection = { start, end };
+  }
+
+  function tryPreviewFormat(action) {
+    const previewEditor = window.previewEditor;
+    if (!previewEditor?.hasSelection?.()) return false;
+
+    if (PREVIEW_COMMANDS[action]) {
+      previewEditor.applyCommand(PREVIEW_COMMANDS[action]);
+      return true;
+    }
+
+    const previewWraps = {
+      marker: () => previewEditor.wrapSelection("mark", "tg-mark"),
+      spoiler: () => previewEditor.wrapSelection("span", "tg-spoiler"),
+      code: () => previewEditor.wrapSelection("code"),
+      sub: () => previewEditor.wrapSelection("sub"),
+    };
+
+    if (previewWraps[action]) {
+      return previewWraps[action]();
+    }
+
+    return false;
+  }
+
+  function getLinesRange(textarea) {
+    const value = textarea.value;
+    let { start, end } = getSelectionRange(textarea);
 
     if (start === end) {
       start = value.lastIndexOf("\n", start - 1) + 1;
@@ -55,8 +121,7 @@
     const newBlock = newLines.join("\n");
 
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
-    textarea.setSelectionRange(start, start + newBlock.length);
-    textarea.focus();
+    setSelectionRange(textarea, start, start + newBlock.length);
     notifyContentChange(textarea);
   }
 
@@ -132,8 +197,7 @@
 
     const newBlock = newLines.join("\n");
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
-    textarea.setSelectionRange(start, start + newBlock.length);
-    textarea.focus();
+    setSelectionRange(textarea, start, start + newBlock.length);
     notifyContentChange(textarea);
   }
 
@@ -141,8 +205,7 @@
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const { start, end } = getSelectionRange(textarea);
     const value = textarea.value;
     const selected = value.substring(start, end);
     const inner = selected || "текст";
@@ -152,8 +215,7 @@
 
     const cursorStart = start + before.length;
     const cursorEnd = cursorStart + inner.length;
-    textarea.setSelectionRange(cursorStart, cursorEnd);
-    textarea.focus();
+    setSelectionRange(textarea, cursorStart, cursorEnd);
     notifyContentChange(textarea);
   }
 
@@ -161,8 +223,7 @@
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const { start, end } = getSelectionRange(textarea);
     let before = textarea.value.substring(0, start);
     let after = textarea.value.substring(end);
 
@@ -179,8 +240,7 @@
     const insertion = block + "\n";
     textarea.value = before + insertion + after;
     const pos = before.length + insertion.length;
-    textarea.setSelectionRange(pos, pos);
-    textarea.focus();
+    setSelectionRange(textarea, pos, pos);
     notifyContentChange(textarea);
   }
 
@@ -209,8 +269,7 @@
     const newBlock = match ? match[1] : `<aside>${block}</aside>`;
 
     textarea.value = value.substring(0, start) + newBlock + value.substring(end);
-    textarea.setSelectionRange(start, start + newBlock.length);
-    textarea.focus();
+    setSelectionRange(textarea, start, start + newBlock.length);
     notifyContentChange(textarea);
   }
 
@@ -218,8 +277,7 @@
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const { start, end } = getSelectionRange(textarea);
     const selected = textarea.value.substring(start, end);
 
     const summary = await window.appModal.prompt({
@@ -247,15 +305,13 @@
     });
     if (!url) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const { start, end } = getSelectionRange(textarea);
     const selected = textarea.value.substring(start, end) || "ссылка";
     const link = `[${selected}](${url.trim()})`;
 
     textarea.value = textarea.value.substring(0, start) + link + textarea.value.substring(end);
     const pos = start + link.length;
-    textarea.setSelectionRange(pos, pos);
-    textarea.focus();
+    setSelectionRange(textarea, pos, pos);
     notifyContentChange(textarea);
   }
 
@@ -263,14 +319,12 @@
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const { start, end } = getSelectionRange(textarea);
     const selected = textarea.value.substring(start, end);
     const inner = selected || "E=mc^2";
 
     textarea.value = textarea.value.substring(0, start) + "$" + inner + "$" + textarea.value.substring(end);
-    textarea.setSelectionRange(start + 1, start + 1 + inner.length);
-    textarea.focus();
+    setSelectionRange(textarea, start + 1, start + 1 + inner.length);
     notifyContentChange(textarea);
   }
 
@@ -458,6 +512,9 @@
     }
 
     e.preventDefault();
+    if (tryPreviewFormat(action)) {
+      return;
+    }
     switch (action) {
       case "h1":
         applyHeader(1);
@@ -526,7 +583,18 @@
   }
 
   function initToolbar() {
+    const textarea = document.getElementById("post-content");
+    textarea?.addEventListener("mouseup", saveTextareaSelection);
+    textarea?.addEventListener("keyup", saveTextareaSelection);
+    textarea?.addEventListener("select", saveTextareaSelection);
+    textarea?.addEventListener("focus", saveTextareaSelection);
+
     document.querySelectorAll(".editor-toolbar").forEach((toolbar) => {
+      toolbar.addEventListener("mousedown", (e) => {
+        if (e.target.closest(".fmt-btn")) {
+          e.preventDefault();
+        }
+      });
       toolbar.addEventListener("click", handleToolbarClick);
     });
 
