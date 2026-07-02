@@ -21,9 +21,11 @@ from app.post_utils import (
     maybe_fix_generic_title,
     title_from_content,
 )
-from app.publish import publish_post_to_telegram
+from app.publish import finalize_published_post, publish_post_to_telegram
 from app.scheduler import cancel_scheduled_post, publish_post_by_id, schedule_post
 from app.telegram_client import TelegramError
+from app.telegram_stats import channel_stats_to_dict
+from app.tracking import links_for_post, tracking_settings_to_dict
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
@@ -198,6 +200,7 @@ async def publish_now(post_id: int, db: Session = Depends(get_db), _: str = Depe
         post.telegram_message_id = message_id
         post.scheduled_at = None
         post.error_message = None
+        await finalize_published_post(db, post)
         db.commit()
         db.refresh(post)
         return post_to_dict(post, db)
@@ -234,3 +237,23 @@ async def schedule(
     schedule_post(post_id, scheduled_at)
     db.refresh(post)
     return post_to_dict(post, db)
+
+
+@router.get("/{post_id}/stats")
+async def get_post_stats(post_id: int, db: Session = Depends(get_db), _: str = Depends(require_user)):
+    post = db.get(Post, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Пост не найден")
+    if post.status != PostStatus.PUBLISHED.value:
+        raise HTTPException(status_code=400, detail="Статистика доступна только для опубликованных постов")
+
+    return {
+        "post_id": post.id,
+        "title": post.title,
+        "published_at": _utc_iso(post.published_at),
+        "telegram_message_id": post.telegram_message_id,
+        "channel_stats": channel_stats_to_dict(post.channel_stats, post, db),
+        "buttons": buttons_for_post(db, post.id),
+        "links": links_for_post(db, post.id),
+        "tracking": tracking_settings_to_dict(db),
+    }

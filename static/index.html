@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=17">
+  <link rel="stylesheet" href="/static/css/style.css?v=18">
 </head>
 <body>
   <header class="header">
@@ -56,6 +56,43 @@
             <button type="button" class="btn btn-secondary" id="verify-telegram-btn">Проверить подключение</button>
           </div>
         </form>
+
+        <section class="settings-section">
+          <h2 class="settings-title">Статистика публикаций</h2>
+          <p class="settings-desc">Опубликованные посты по месяцам (хранятся 3 месяца, даже после удаления поста).</p>
+          <div id="monthly-stats" class="monthly-stats">
+            <p class="field-hint">Загрузка…</p>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h2 class="settings-title">Внешний трекер</h2>
+          <p class="settings-desc">UTM-метки добавляются к ссылкам при редиректе (/go/...). Подходит для Метрики, GA и short links.</p>
+          <form id="tracking-form" class="settings-form">
+            <div class="form-group form-group-inline">
+              <label class="checkbox-label">
+                <input type="checkbox" id="tracking-enabled" checked>
+                Добавлять UTM к ссылкам
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="utm-source">utm_source</label>
+              <input type="text" id="utm-source" class="input" placeholder="telegram">
+            </div>
+            <div class="form-group">
+              <label for="utm-medium">utm_medium</label>
+              <input type="text" id="utm-medium" class="input" placeholder="channel">
+            </div>
+            <div class="form-group">
+              <label for="utm-campaign">utm_campaign</label>
+              <input type="text" id="utm-campaign" class="input" placeholder="post_{post_id}">
+              <p class="field-hint"><code>{post_id}</code> — ID поста</p>
+            </div>
+            <div class="settings-actions">
+              <button type="submit" class="btn btn-primary">Сохранить трекер</button>
+            </div>
+          </form>
+        </section>
       </div>
 
       <div id="editor-view" class="hidden">
@@ -151,12 +188,12 @@
               </div>
             </div>
             <div class="panel-body editor-panel-body">
-              <div id="editor-visual" class="editor-visual hidden">
+              <div id="editor-visual" class="editor-visual">
                 <div id="editor-visual-content" class="editor-visual-content">
                   <div class="tg-message tg-rich"><p class="empty">Начните вводить текст…</p></div>
                 </div>
               </div>
-              <textarea class="textarea" id="post-content" placeholder="Введите текст поста…"></textarea>
+              <textarea class="textarea hidden" id="post-content" placeholder="Введите текст поста…"></textarea>
             </div>
           </div>
           <div class="panel panel-preview">
@@ -182,6 +219,16 @@
             <button type="button" class="btn btn-secondary" id="add-button-btn">+ Кнопка</button>
           </div>
           <div id="buttons-list" class="buttons-list"></div>
+        </section>
+
+        <section class="post-stats-section hidden" id="post-stats-section">
+          <div class="post-stats-header">
+            <h3 class="buttons-title">Статистика поста</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="refresh-stats-btn">Обновить</button>
+          </div>
+          <div id="post-stats-content" class="post-stats-content">
+            <p class="field-hint">Статистика появится после публикации</p>
+          </div>
         </section>
 
         <div class="schedule-row">
@@ -243,11 +290,12 @@
   <script src="/static/js/modals.js?v=5"></script>
   <script src="/static/js/time-moscow.js?v=5"></script>
   <script src="/static/js/preview-editor.js?v=3"></script>
-  <script src="/static/js/left-editor.js?v=2"></script>
+  <script src="/static/js/left-editor.js?v=3"></script>
   <script src="/static/js/editor-toolbar.js?v=11"></script>
   <script src="/static/js/emoji-data.js?v=1"></script>
   <script src="/static/js/emoji-picker.js?v=4"></script>
   <script src="/static/js/post-buttons.js?v=3"></script>
-  <script src="/static/js/app.js?v=14"></script>
+  <script src="/static/js/post-stats.js?v=1"></script>
+  <script src="/static/js/app.js?v=15"></script>
 </body>
 </html>

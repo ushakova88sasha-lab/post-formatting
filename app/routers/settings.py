@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 from app.auth import require_user
 from app.database import get_db
 from app.settings_store import get_bot_token, get_channel_id, mask_token, save_telegram_settings
+from app.stats_publish_log import monthly_published_stats, purge_old_publish_logs
 from app.telegram_runtime import refresh_telegram_state
+from app.tracking import save_tracking_settings, tracking_settings_to_dict
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -22,6 +24,26 @@ class TelegramSettingsResponse(BaseModel):
 class TelegramSettingsUpdate(BaseModel):
     bot_token: str | None = Field(default=None, description="Пусто — не менять")
     channel_id: str = Field(..., min_length=1)
+
+
+class TrackingSettingsResponse(BaseModel):
+    enabled: bool
+    utm_source: str
+    utm_medium: str
+    utm_campaign: str
+
+
+class TrackingSettingsUpdate(BaseModel):
+    enabled: bool | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+
+
+class MonthlyStatsResponse(BaseModel):
+    retention_months: int
+    months: list[dict]
+    total: int
 
 
 @router.get("/telegram", response_model=TelegramSettingsResponse)
@@ -70,3 +92,29 @@ async def verify_telegram_settings(
             detail="Не удалось подключиться к боту. Проверьте токен.",
         )
     return await get_telegram_settings(request)
+
+
+@router.get("/stats", response_model=MonthlyStatsResponse)
+async def get_publish_stats(db: Session = Depends(get_db), _: str = Depends(require_user)):
+    purge_old_publish_logs(db)
+    return monthly_published_stats(db)
+
+
+@router.get("/tracking", response_model=TrackingSettingsResponse)
+async def get_tracking_settings_route(db: Session = Depends(get_db), _: str = Depends(require_user)):
+    return tracking_settings_to_dict(db)
+
+
+@router.put("/tracking", response_model=TrackingSettingsResponse)
+async def update_tracking_settings(
+    payload: TrackingSettingsUpdate,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_user),
+):
+    return save_tracking_settings(
+        db,
+        enabled=payload.enabled,
+        utm_source=payload.utm_source,
+        utm_medium=payload.utm_medium,
+        utm_campaign=payload.utm_campaign,
+    )

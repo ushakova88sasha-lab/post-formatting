@@ -2,14 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.buttons import record_click, visitor_hash_from_request
+from app.buttons import visitor_hash_from_request
 from app.database import get_db
+from app.tracking import record_tracked_click
 
 router = APIRouter(tags=["clicks"])
 
 
 @router.get("/go/{click_token}")
-async def track_button_click(
+async def track_click(
     click_token: str,
     request: Request,
     db: Session = Depends(get_db),
@@ -21,7 +22,7 @@ async def track_button_click(
         request.headers.get("x-forwarded-for"),
     )
     try:
-        target_url = record_click(
+        target_url = record_tracked_click(
             db,
             click_token,
             visitor_hash=visitor_hash,

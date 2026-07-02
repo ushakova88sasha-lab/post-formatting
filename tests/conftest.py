@@ -13,7 +13,8 @@ os.environ.setdefault("SESSION_SECRET", "test-session-secret-32-characters-long"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
 os.environ.setdefault("PUBLIC_BASE_URL", "http://testserver")
 
-from app.database import init_db  # noqa: E402
+from app.database import AppSetting, init_db  # noqa: E402
+from app.settings_store import KEY_TRACKING_ENABLED  # noqa: E402
 from app.main import app  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -24,6 +25,15 @@ def ensure_db():
     if TEST_DB.exists():
         TEST_DB.unlink()
     init_db()
+    from app.database import SessionLocal
+
+    with SessionLocal() as db:
+        row = db.get(AppSetting, KEY_TRACKING_ENABLED)
+        if row:
+            row.value = "0"
+        else:
+            db.add(AppSetting(key=KEY_TRACKING_ENABLED, value="0"))
+        db.commit()
 
 
 @pytest.fixture

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Публичный URL сервера — нужен Telegram для загрузки картинок по HTTP
     public_base_url: str = "http://localhost:8000"
     post_retention_days: int = 7
+    stats_retention_months: int = 3
 
 
 settings = Settings()

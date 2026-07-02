@@ -123,7 +123,8 @@ def test_publish_sends_inline_keyboard(client, auth_cookies):
 
     with patch("app.routers.posts.publish_post_to_telegram", new_callable=AsyncMock) as publish_mock:
         publish_mock.return_value = 12345
-        response = client.post(f"/api/posts/{post['id']}/publish", cookies=auth_cookies)
+        with patch("app.routers.posts.finalize_published_post", new_callable=AsyncMock):
+            response = client.post(f"/api/posts/{post['id']}/publish", cookies=auth_cookies)
 
     assert response.status_code == 200
     publish_mock.assert_awaited_once()

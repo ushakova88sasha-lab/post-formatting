@@ -5,7 +5,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.database import Post, PostStatus, SessionLocal
-from app.publish import publish_post_to_telegram
+from app.publish import finalize_published_post, publish_post_to_telegram
 from app.telegram_client import TelegramError
 
 scheduler = AsyncIOScheduler()
@@ -26,6 +26,7 @@ async def publish_post_by_id(post_id: int) -> None:
             post.published_at = datetime.utcnow()
             post.telegram_message_id = message_id
             post.error_message = None
+            await finalize_published_post(db, post)
         except TelegramError as exc:
             post.status = PostStatus.FAILED.value
             post.error_message = str(exc)
@@ -62,6 +63,26 @@ def cancel_scheduled_post(post_id: int) -> None:
         scheduler.remove_job(job_id)
 
 
+def purge_old_publish_logs_session() -> int:
+    db = SessionLocal()
+    try:
+        from app.stats_publish_log import purge_old_publish_logs
+
+        return purge_old_publish_logs(db)
+    finally:
+        db.close()
+
+
+async def refresh_telegram_stats_session() -> int:
+    db = SessionLocal()
+    try:
+        from app.telegram_stats import refresh_recent_published_stats
+
+        return await refresh_recent_published_stats(db)
+    finally:
+        db.close()
+
+
 def restore_scheduled_jobs() -> None:
     db = SessionLocal()
     try:
@@ -90,6 +111,18 @@ def start_scheduler() -> None:
             purge_expired_posts_session,
             trigger=IntervalTrigger(hours=6),
             id="purge_expired_posts",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            purge_old_publish_logs_session,
+            trigger=IntervalTrigger(hours=12),
+            id="purge_old_publish_logs",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            refresh_telegram_stats_session,
+            trigger=IntervalTrigger(hours=3),
+            id="refresh_telegram_stats",
             replace_existing=True,
         )
 

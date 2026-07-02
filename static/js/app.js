@@ -109,6 +109,8 @@ function showView(view) {
     document.getElementById("editor-view").classList.add("hidden");
     document.getElementById("empty-view").classList.add("hidden");
     loadTelegramSettings();
+    window.postStats?.loadMonthlyStats(api);
+    window.postStats?.loadTrackingSettings(api);
     return;
   }
 
@@ -244,6 +246,10 @@ async function selectPost(id) {
   document.getElementById("schedule-btn").disabled = isPublished;
   document.getElementById("save-btn").disabled = isPublished;
   window.postButtons?.setReadOnly(isPublished, isPublished);
+  window.postStats?.setPostStatsVisible(isPublished);
+  if (isPublished) {
+    window.postStats?.loadPostStats(api, post.id);
+  }
   window.leftEditor?.setEditable(!isPublished);
   if (window.leftEditor?.isVisualMode?.()) {
     window.leftEditor.refreshFromMarkdown?.();
@@ -517,6 +523,18 @@ document.querySelectorAll(".sidebar-tab").forEach((tab) => {
 
 document.getElementById("settings-form").addEventListener("submit", saveTelegramSettings);
 document.getElementById("verify-telegram-btn").addEventListener("click", verifyTelegramSettings);
+document.getElementById("tracking-form")?.addEventListener("submit", (event) => {
+  window.postStats
+    ?.saveTrackingSettings(api, event)
+    .catch((err) => showAlert(err.message || "Не удалось сохранить трекер"));
+});
+document.getElementById("refresh-stats-btn")?.addEventListener("click", () => {
+  if (!currentPostId) return;
+  window.postStats
+    ?.loadPostStats(api, currentPostId)
+    .then(() => showAlert("Статистика обновлена", "success"))
+    .catch((err) => showAlert(err.message || "Не удалось обновить статистику"));
+});
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await api("/api/auth/logout", { method: "POST" });

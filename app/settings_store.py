@@ -7,6 +7,10 @@ from app.database import AppSetting, SessionLocal
 
 KEY_BOT_TOKEN = "telegram_bot_token"
 KEY_CHANNEL_ID = "telegram_channel_id"
+KEY_TRACKING_ENABLED = "tracking_enabled"
+KEY_TRACKING_UTM_SOURCE = "tracking_utm_source"
+KEY_TRACKING_UTM_MEDIUM = "tracking_utm_medium"
+KEY_TRACKING_UTM_CAMPAIGN = "tracking_utm_campaign"
 
 
 def _get(db: Session, key: str) -> str | None:
@@ -75,3 +79,38 @@ def mask_token(token: str) -> str:
     if len(token) <= 8:
         return "••••••••"
     return f"••••{token[-4:]}"
+
+
+def get_tracking_settings(db: Session | None = None) -> dict:
+    session = db if db is not None else SessionLocal()
+    try:
+        enabled_raw = _get(session, KEY_TRACKING_ENABLED)
+        enabled = enabled_raw != "0" if enabled_raw is not None else True
+        return {
+            "enabled": enabled,
+            "utm_source": _get(session, KEY_TRACKING_UTM_SOURCE) or "telegram",
+            "utm_medium": _get(session, KEY_TRACKING_UTM_MEDIUM) or "channel",
+            "utm_campaign": _get(session, KEY_TRACKING_UTM_CAMPAIGN) or "post_{post_id}",
+        }
+    finally:
+        if db is None:
+            session.close()
+
+
+def save_tracking_settings(
+    db: Session,
+    *,
+    enabled: bool | None = None,
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+) -> dict:
+    if enabled is not None:
+        _set(db, KEY_TRACKING_ENABLED, "1" if enabled else "0")
+    if utm_source is not None:
+        _set(db, KEY_TRACKING_UTM_SOURCE, utm_source.strip())
+    if utm_medium is not None:
+        _set(db, KEY_TRACKING_UTM_MEDIUM, utm_medium.strip())
+    if utm_campaign is not None:
+        _set(db, KEY_TRACKING_UTM_CAMPAIGN, utm_campaign.strip())
+    return get_tracking_settings(db)
