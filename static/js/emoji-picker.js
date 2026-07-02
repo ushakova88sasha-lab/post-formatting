@@ -49,6 +49,7 @@
     textarea.setSelectionRange(pos, pos);
     textarea.focus();
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    window.editorHistory?.onEdit?.();
     window.refreshPreview?.();
   }
 

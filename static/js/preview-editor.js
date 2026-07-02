@@ -336,7 +336,7 @@
     document.execCommand(command, false, null);
     savePreviewSelection();
     dirty = true;
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.();
     return true;
   }
@@ -354,7 +354,7 @@
     if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
       savePreviewSelection();
       dirty = true;
-      syncToTextarea();
+      syncToTextarea({ silent: true, trackHistory: true });
       window.refreshPreview?.();
       return true;
     }
@@ -377,7 +377,7 @@
     sel.addRange(range);
     savePreviewSelection();
     dirty = true;
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.();
     return true;
   }
@@ -424,7 +424,9 @@
     messageEl.addEventListener("blur", () => {
       focused = false;
       savePreviewSelection();
-      syncToTextarea();
+      if (dirty) {
+        syncToTextarea({ silent: true, trackHistory: true });
+      }
       dirty = false;
       updateEmptyState(messageEl);
       window.dispatchEvent(new CustomEvent("preview-editor:blur"));
@@ -438,7 +440,10 @@
       dirty = true;
       updateEmptyState(messageEl);
       clearTimeout(syncTimer);
-      syncTimer = setTimeout(syncToTextarea, 200);
+      syncTimer = setTimeout(() => {
+        syncToTextarea({ silent: true, trackHistory: true });
+        window.refreshPreview?.();
+      }, 200);
     });
 
     messageEl.addEventListener("paste", (e) => {
@@ -458,7 +463,7 @@
     applyEditableState(messageEl);
   }
 
-  function syncToTextarea() {
+  function syncToTextarea({ silent = false, trackHistory = false } = {}) {
     const messageEl = getMessage();
     const textarea = getTextarea();
     if (!messageEl || !textarea || textarea.readOnly) {
@@ -474,7 +479,12 @@
 
     textarea.value = normalized;
     dirty = false;
-    textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    if (!silent) {
+      textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    }
+    if (trackHistory) {
+      window.editorHistory?.onEdit?.();
+    }
   }
 
   function clearFormatting() {
@@ -514,7 +524,7 @@
 
     dirty = true;
     updateEmptyState(messageEl);
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.(true);
     return true;
   }
@@ -572,7 +582,7 @@
       }
 
       dirty = true;
-      syncToTextarea();
+      syncToTextarea({ silent: true, trackHistory: true });
       return true;
     }
 
@@ -582,7 +592,7 @@
       document.execCommand("insertText", false, text);
       savePreviewSelection();
       dirty = true;
-      syncToTextarea();
+      syncToTextarea({ silent: true, trackHistory: true });
       return true;
     }
 

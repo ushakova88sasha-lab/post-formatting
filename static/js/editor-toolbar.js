@@ -15,7 +15,12 @@
   };
 
   function notifyContentChange(textarea) {
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    if (!window.leftEditor?.isVisualMode?.()) {
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    } else {
+      window.leftEditor.syncToTextarea?.({ force: true, silent: true });
+    }
+    window.editorHistory?.onEdit?.();
     if (window.leftEditor?.isVisualMode?.()) {
       window.leftEditor.refreshFromMarkdown?.();
     }

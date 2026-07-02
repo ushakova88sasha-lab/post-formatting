@@ -30,9 +30,9 @@
     if (!textarea) return "";
 
     if (window.leftEditor?.isVisualMode?.()) {
-      window.leftEditor.syncToTextarea?.({ force: true });
+      window.leftEditor.syncToTextarea?.({ force: true, silent: true });
     } else if (window.previewEditor?.isEditing?.()) {
-      window.previewEditor.syncToTextarea?.();
+      window.previewEditor.syncToTextarea?.({ silent: true });
     }
 
     return textarea.value;
@@ -44,7 +44,6 @@
 
     applying = true;
     textarea.value = value;
-    textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     syncVisualFromTextarea();
     applying = false;
     baseline = value;
@@ -67,7 +66,7 @@
     editSessionActive = false;
   }
 
-  function onContentInput() {
+  function onEdit() {
     if (applying || !enabled) return;
 
     const textarea = getTextarea();
@@ -90,13 +89,23 @@
     updateButtons();
   }
 
+  function onTextareaInput() {
+    if (window.leftEditor?.isVisualMode?.()) return;
+    if (window.previewEditor?.isEditing?.()) return;
+    onEdit();
+  }
+
   function undo() {
     if (!enabled || !undoStack.length) return false;
 
+    applying = true;
     flushPendingSession();
 
     const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return false;
+    if (!textarea || textarea.readOnly) {
+      applying = false;
+      return false;
+    }
 
     const current = readContent();
     redoStack.push(current);
@@ -106,6 +115,7 @@
 
     const previous = undoStack.pop();
     writeContent(previous);
+    applying = false;
     updateButtons();
     return true;
   }
@@ -113,26 +123,33 @@
   function redo() {
     if (!enabled || !redoStack.length) return false;
 
+    applying = true;
     flushPendingSession();
 
     const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return false;
+    if (!textarea || textarea.readOnly) {
+      applying = false;
+      return false;
+    }
 
     const current = readContent();
     pushUndo(current);
 
     const next = redoStack.pop();
     writeContent(next);
+    applying = false;
     updateButtons();
     return true;
   }
 
   function reset(content) {
+    applying = true;
     flushPendingSession();
     undoStack = [];
     redoStack = [];
     baseline = content ?? readContent();
     editSessionActive = false;
+    applying = false;
     updateButtons();
   }
 
@@ -201,7 +218,7 @@
 
   function init() {
     const textarea = getTextarea();
-    textarea?.addEventListener("input", onContentInput);
+    textarea?.addEventListener("input", onTextareaInput);
     document.addEventListener("keydown", onKeydown);
 
     window.editorHistory = {
@@ -210,6 +227,7 @@
       reset,
       setEnabled,
       updateButtons,
+      onEdit,
     };
 
     reset("");

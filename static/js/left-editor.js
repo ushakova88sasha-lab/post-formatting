@@ -50,7 +50,7 @@
     return window.previewEditor?.messageToMarkdown?.(messageEl) ?? "";
   }
 
-  function syncToTextarea({ force = false } = {}) {
+  function syncToTextarea({ force = false, silent = false, trackHistory = false } = {}) {
     const messageEl = getMessage();
     const textarea = getTextarea();
     if (!messageEl || !textarea || textarea.readOnly) return;
@@ -60,14 +60,20 @@
       return;
     }
 
-    if (textarea.value === markdown) {
+    const nextValue = markdown.trim() === EMPTY_TEXT ? "" : markdown;
+    if (textarea.value === nextValue) {
       dirty = false;
       return;
     }
 
-    textarea.value = markdown.trim() === EMPTY_TEXT ? "" : markdown;
+    textarea.value = nextValue;
     dirty = false;
-    textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    if (!silent) {
+      textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    }
+    if (trackHistory) {
+      window.editorHistory?.onEdit?.();
+    }
   }
 
   function saveSelection() {
@@ -188,7 +194,7 @@
       focused = false;
       saveSelection();
       if (dirty) {
-        syncToTextarea({ force: true });
+        syncToTextarea({ force: true, silent: true, trackHistory: true });
       }
       dirty = false;
       updateEmptyState(messageEl);
@@ -204,7 +210,7 @@
       updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
-        syncToTextarea();
+        syncToTextarea({ force: true, silent: true, trackHistory: true });
         window.refreshPreview?.(true);
       }, 200);
     });
@@ -288,7 +294,7 @@
     document.execCommand(command, false, null);
     saveSelection();
     dirty = true;
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.(true);
     return true;
   }
@@ -306,7 +312,7 @@
     if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
       saveSelection();
       dirty = true;
-      syncToTextarea();
+      syncToTextarea({ silent: true, trackHistory: true });
       window.refreshPreview?.(true);
       return true;
     }
@@ -327,7 +333,7 @@
     sel.addRange(range);
     saveSelection();
     dirty = true;
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.(true);
     return true;
   }
@@ -381,7 +387,7 @@
     saveSelection();
     dirty = true;
     updateEmptyState(messageEl);
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.(true);
     return true;
   }
@@ -465,7 +471,7 @@
 
     dirty = true;
     updateEmptyState(messageEl);
-    syncToTextarea();
+    syncToTextarea({ silent: true, trackHistory: true });
     window.refreshPreview?.(true);
     return true;
   }
@@ -508,7 +514,7 @@
         }
       }
       dirty = true;
-      syncToTextarea();
+      syncToTextarea({ silent: true, trackHistory: true });
       window.refreshPreview?.(true);
       return true;
     }
@@ -519,7 +525,7 @@
       document.execCommand("insertText", false, text);
       saveSelection();
       dirty = true;
-      syncToTextarea();
+      syncToTextarea({ silent: true, trackHistory: true });
       window.refreshPreview?.(true);
       return true;
     }
