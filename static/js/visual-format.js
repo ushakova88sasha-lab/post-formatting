@@ -25,14 +25,13 @@
     let node = range.commonAncestorContainer;
     if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
 
-    let innermost = null;
     while (node && node !== boundary) {
       if (matchesElement(node, tagName, className)) {
-        innermost = node;
+        return node;
       }
       node = node.parentElement;
     }
-    return innermost;
+    return null;
   }
 
   function isSelectionInsideElement(range, el) {
@@ -44,19 +43,18 @@
     );
   }
 
+  function isFormatActive(range, boundary, tagName, className) {
+    const wrapper = findInnermostWrapper(range, boundary, tagName, className);
+    return Boolean(wrapper && isSelectionInsideElement(range, wrapper));
+  }
+
   function toggleWrapRange(range, boundary, tagName, className) {
-    let unwrapped = false;
-
-    while (true) {
-      const wrapper = findInnermostWrapper(range, boundary, tagName, className);
-      if (!wrapper || !isSelectionInsideElement(range, wrapper)) {
-        break;
-      }
-      unwrapElement(wrapper);
-      unwrapped = true;
+    const wrapper = findInnermostWrapper(range, boundary, tagName, className);
+    if (!wrapper || !isSelectionInsideElement(range, wrapper)) {
+      return false;
     }
-
-    return unwrapped;
+    unwrapElement(wrapper);
+    return true;
   }
 
   function findClosestBlock(range, messageEl) {
@@ -154,21 +152,16 @@
     return surroundRange(range, aside);
   }
 
-  function queryFormatState(range, boundary, tagName, className) {
-    const wrapper = findInnermostWrapper(range, boundary, tagName, className);
-    return Boolean(wrapper && isSelectionInsideElement(range, wrapper));
-  }
-
   window.visualFormat = {
     unwrapElement,
     findInnermostWrapper,
     isSelectionInsideElement,
+    isFormatActive,
     toggleWrapRange,
     toggleBlockTag,
     toggleQuote,
     toggleCenter,
     findClosestBlock,
     matchesElement,
-    queryFormatState,
   };
 })();

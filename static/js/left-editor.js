@@ -320,11 +320,10 @@
 
     window.editorHistory?.beforeChange?.();
 
-    if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
-      const selAfter = window.getSelection();
-      if (selAfter && selAfter.rangeCount) {
-        savedRange = selAfter.getRangeAt(0).cloneRange();
-      }
+    const vf = window.visualFormat;
+    if (vf?.isFormatActive?.(range, messageEl, tagName, className)) {
+      vf.toggleWrapRange(range, messageEl, tagName, className);
+      saveSelection();
       dirty = true;
       syncToTextarea({ silent: true });
       window.editorHistory?.afterChange?.();

@@ -355,11 +355,10 @@
 
     window.editorHistory?.beforeChange?.();
 
-    if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
-      const selAfter = window.getSelection();
-      if (selAfter && selAfter.rangeCount) {
-        savedPreviewRange = selAfter.getRangeAt(0).cloneRange();
-      }
+    const vf = window.visualFormat;
+    if (vf?.isFormatActive?.(range, messageEl, tagName, className)) {
+      vf.toggleWrapRange(range, messageEl, tagName, className);
+      savePreviewSelection();
       dirty = true;
       syncToTextarea({ silent: true });
       window.editorHistory?.afterChange?.();

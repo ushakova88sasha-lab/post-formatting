@@ -1,18 +1,21 @@
 /**
- * История изменений текста поста: отмена / возврат (до 5 шагов).
+ * История изменений: отмена / возврат (до 5 шагов).
+ *
+ * undoStack хранит предыдущие состояния текста.
+ * committed — текущее зафиксированное состояние.
  */
 (function () {
   const TEXTAREA_ID = "post-content";
   const MAX_HISTORY = 5;
-  const DEBOUNCE_MS = 400;
+  const TYPING_DEBOUNCE_MS = 400;
 
   let undoStack = [];
   let redoStack = [];
-  let baseline = "";
+  let committed = "";
   let applying = false;
-  let editSessionActive = false;
-  let debounceTimer = null;
   let enabled = true;
+  let typingActive = false;
+  let typingTimer = null;
 
   function getTextarea() {
     return document.getElementById(TEXTAREA_ID);
@@ -51,77 +54,73 @@
     await window.refreshPreview?.(true);
 
     applying = false;
-    baseline = readContent();
-    editSessionActive = false;
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
+    committed = value;
+    typingActive = false;
+    clearTimeout(typingTimer);
+    typingTimer = null;
   }
 
   function pushUndo(snapshot) {
-    if (snapshot === undefined) return;
     undoStack.push(snapshot);
     if (undoStack.length > MAX_HISTORY) {
       undoStack.shift();
     }
   }
 
-  function flushPendingSession() {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-    if (!editSessionActive) return;
-    baseline = readContent();
-    editSessionActive = false;
+  function flushTyping() {
+    clearTimeout(typingTimer);
+    typingTimer = null;
+    if (!typingActive) return;
+    committed = readContent();
+    typingActive = false;
   }
 
-  /** Группирует быстрый набор текста в один шаг истории. */
+  /** Быстрый набор — один шаг истории на «порцию» текста. */
   function onTyping() {
     if (applying || !enabled) return;
 
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
-    if (!editSessionActive) {
-      editSessionActive = true;
-      pushUndo(baseline);
+    if (!typingActive) {
+      pushUndo(committed);
       redoStack = [];
+      typingActive = true;
     }
 
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      baseline = readContent();
-      editSessionActive = false;
-      debounceTimer = null;
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      committed = readContent();
+      typingActive = false;
+      typingTimer = null;
       updateButtons();
-    }, DEBOUNCE_MS);
+    }, TYPING_DEBOUNCE_MS);
 
     updateButtons();
   }
 
-  /** Снимок перед форматированием, вставкой кнопкой и т.п. */
+  /** Перед форматированием, вставкой кнопкой и т.п. */
   function beforeChange() {
     if (applying || !enabled) return false;
 
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return false;
 
-    flushPendingSession();
+    flushTyping();
     pushUndo(readContent());
     redoStack = [];
-    editSessionActive = false;
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
     updateButtons();
     return true;
   }
 
   function afterChange() {
     if (applying || !enabled) return;
-    baseline = readContent();
+    committed = readContent();
     updateButtons();
   }
 
-  function flushTyping() {
-    flushPendingSession();
+  function flushTypingState() {
+    flushTyping();
     updateButtons();
   }
 
@@ -134,7 +133,7 @@
   async function undo() {
     if (!enabled || !undoStack.length) return false;
 
-    flushPendingSession();
+    flushTyping();
 
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return false;
@@ -154,13 +153,12 @@
   async function redo() {
     if (!enabled || !redoStack.length) return false;
 
-    flushPendingSession();
+    flushTyping();
 
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return false;
 
-    const current = readContent();
-    pushUndo(current);
+    pushUndo(readContent());
 
     const next = redoStack.pop();
     await writeContent(next);
@@ -170,11 +168,10 @@
 
   function reset(content) {
     applying = true;
-    flushPendingSession();
+    flushTyping();
     undoStack = [];
     redoStack = [];
-    baseline = content ?? readContent();
-    editSessionActive = false;
+    committed = content ?? readContent();
     applying = false;
     updateButtons();
   }
@@ -182,7 +179,7 @@
   function setEnabled(nextEnabled) {
     enabled = Boolean(nextEnabled);
     if (!enabled) {
-      flushPendingSession();
+      flushTyping();
     }
     updateButtons();
   }
@@ -256,7 +253,7 @@
       onTyping,
       beforeChange,
       afterChange,
-      flushTyping,
+      flushTyping: flushTypingState,
     };
 
     reset("");

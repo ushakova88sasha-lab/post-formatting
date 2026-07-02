@@ -44,15 +44,7 @@
   }
 
   function getTextarea() {
-    const el = document.getElementById("post-content");
-    if (!el || el.readOnly) return el;
-
-    if (window.leftEditor?.isVisualMode?.()) {
-      window.leftEditor.syncToTextarea?.();
-    } else if (window.previewEditor?.isEditing?.()) {
-      window.previewEditor.syncToTextarea();
-    }
-    return el;
+    return document.getElementById("post-content");
   }
 
   function getSelectionRange(textarea) {
