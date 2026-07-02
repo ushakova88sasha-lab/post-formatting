@@ -87,6 +87,8 @@ def post_list_item_to_dict(post: Post) -> dict:
 
 
 def _apply_post_filter(query, status_filter: str | None):
+    if status_filter in (None, "all"):
+        return query
     if status_filter == "published":
         return query.filter(Post.status == PostStatus.PUBLISHED.value)
     if status_filter == "draft":
@@ -109,7 +111,7 @@ def _sync_generic_titles(posts: list[Post], db: Session) -> None:
 async def list_posts(
     db: Session = Depends(get_db),
     _: str = Depends(require_user),
-    status_filter: str | None = Query(default=None, alias="filter", pattern="^(draft|published)$"),
+    status_filter: str | None = Query(default=None, alias="filter", pattern="^(all|draft|published)$"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=50),
 ):

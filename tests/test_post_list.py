@@ -19,6 +19,21 @@ def _create_post(client, auth_cookies, title: str, status: str = PostStatus.DRAF
     return post
 
 
+def test_list_posts_without_filter_returns_all(client, auth_cookies):
+    before_all = client.get("/api/posts?limit=1", cookies=auth_cookies).json()["total"]
+    before_drafts = client.get("/api/posts?filter=draft&limit=1", cookies=auth_cookies).json()["total"]
+
+    _create_post(client, auth_cookies, "AllList draft")
+    _create_post(client, auth_cookies, "AllList published", PostStatus.PUBLISHED.value)
+
+    all_data = client.get("/api/posts?limit=50", cookies=auth_cookies).json()
+    assert all_data["total"] == before_all + 2
+    assert all_data["filter"] is None
+
+    draft_data = client.get("/api/posts?filter=draft&limit=50", cookies=auth_cookies).json()
+    assert draft_data["total"] == before_drafts + 1
+
+
 def test_list_posts_filter_and_pagination(client, auth_cookies):
     before_drafts = client.get("/api/posts?filter=draft&limit=1", cookies=auth_cookies).json()["total"]
     before_published = client.get("/api/posts?filter=published&limit=1", cookies=auth_cookies).json()["total"]

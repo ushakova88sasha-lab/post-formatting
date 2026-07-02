@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=19">
+  <link rel="stylesheet" href="/static/css/style.css?v=20">
 </head>
 <body>
   <header class="header">
@@ -26,11 +26,13 @@
       <div id="sidebar-posts" class="sidebar-panel">
         <button class="btn btn-primary" id="new-post-btn" style="width:100%; margin-bottom: 0.75rem;">+ Новый пост</button>
         <div class="post-list-filters" role="tablist" aria-label="Фильтр постов">
-          <button type="button" class="post-filter-btn active" data-filter="draft" role="tab">Черновики</button>
+          <button type="button" class="post-filter-btn active" data-filter="all" role="tab">Все</button>
+          <button type="button" class="post-filter-btn" data-filter="draft" role="tab">Черновики</button>
           <button type="button" class="post-filter-btn" data-filter="published" role="tab">Опубликованные</button>
         </div>
         <div class="post-list-scroll" id="post-list-scroll">
           <ul class="post-list" id="post-list"></ul>
+          <div id="post-list-sentinel" class="post-list-sentinel" aria-hidden="true"></div>
           <div id="post-list-loader" class="post-list-loader hidden">Загрузка…</div>
         </div>
       </div>
@@ -303,6 +305,6 @@
   <script src="/static/js/emoji-picker.js?v=4"></script>
   <script src="/static/js/post-buttons.js?v=3"></script>
   <script src="/static/js/post-stats.js?v=1"></script>
-  <script src="/static/js/app.js?v=16"></script>
+  <script src="/static/js/app.js?v=17"></script>
 </body>
 </html>

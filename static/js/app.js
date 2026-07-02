@@ -5,10 +5,11 @@ let posts = [];
 let retentionDays = 7;
 let previewTimer = null;
 let currentView = "posts";
-let postFilter = "draft";
+let postFilter = "all";
 let postsOffset = 0;
 let hasMorePosts = true;
 let loadingPosts = false;
+let postsLoadObserver = null;
 const POSTS_PAGE_SIZE = 10;
 
 async function api(path, options = {}) {
@@ -62,12 +63,27 @@ function updateRetentionHint() {
   el.textContent = `Посты хранятся ${days} ${label}, затем удаляются автоматически`;
 }
 
+function emptyPostsLabel() {
+  if (postFilter === "published") return "Нет опубликованных постов";
+  if (postFilter === "draft") return "Нет черновиков";
+  return "Нет постов";
+}
+
+function buildPostsQuery(offset) {
+  const params = new URLSearchParams({
+    offset: String(offset),
+    limit: String(POSTS_PAGE_SIZE),
+  });
+  if (postFilter !== "all") {
+    params.set("filter", postFilter);
+  }
+  return params;
+}
+
 function renderPostList() {
   const list = document.getElementById("post-list");
   if (!posts.length) {
-    const emptyLabel =
-      postFilter === "published" ? "Нет опубликованных постов" : "Нет черновиков";
-    list.innerHTML = `<li style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem 0.75rem;">${emptyLabel}</li>`;
+    list.innerHTML = `<li style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem 0.75rem;">${emptyPostsLabel()}</li>`;
     return;
   }
 
@@ -98,6 +114,42 @@ function setPostListLoading(isLoading) {
   const loader = document.getElementById("post-list-loader");
   if (loader) {
     loader.classList.toggle("hidden", !isLoading);
+  }
+}
+
+function setupPostsInfiniteScroll() {
+  const root = document.getElementById("post-list-scroll");
+  const sentinel = document.getElementById("post-list-sentinel");
+  if (!root || !sentinel) return;
+
+  if (postsLoadObserver) {
+    postsLoadObserver.disconnect();
+  }
+
+  postsLoadObserver = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0];
+      if (!entry?.isIntersecting || loadingPosts || !hasMorePosts) return;
+      loadPosts().catch((err) => showAlert(err.message || "Не удалось загрузить посты"));
+    },
+    {
+      root,
+      rootMargin: "120px",
+      threshold: 0,
+    }
+  );
+
+  postsLoadObserver.observe(sentinel);
+}
+
+async function maybeFillPostList() {
+  const root = document.getElementById("post-list-scroll");
+  if (!root || loadingPosts || !hasMorePosts) return;
+
+  let guard = 0;
+  while (hasMorePosts && !loadingPosts && root.scrollHeight <= root.clientHeight + 8 && guard < 20) {
+    guard += 1;
+    await loadPosts();
   }
 }
 
@@ -243,12 +295,7 @@ async function loadPosts({ reset = false, selectFirst = false } = {}) {
   setPostListLoading(true);
 
   try {
-    const params = new URLSearchParams({
-      filter: postFilter,
-      offset: String(postsOffset),
-      limit: String(POSTS_PAGE_SIZE),
-    });
-    const data = await api(`/api/posts?${params.toString()}`);
+    const data = await api(`/api/posts?${buildPostsQuery(postsOffset).toString()}`);
     if (!data) return;
 
     const batch = Array.isArray(data?.posts) ? data.posts : [];
@@ -259,6 +306,7 @@ async function loadPosts({ reset = false, selectFirst = false } = {}) {
 
     updateRetentionHint();
     renderPostList();
+    setupPostsInfiniteScroll();
 
     if (selectFirst) {
       if (posts.length) {
@@ -272,6 +320,8 @@ async function loadPosts({ reset = false, selectFirst = false } = {}) {
     loadingPosts = false;
     setPostListLoading(false);
   }
+
+  await maybeFillPostList();
 }
 
 async function reloadPostList({ keepSelection = true } = {}) {
@@ -495,11 +545,7 @@ async function publishPost() {
   try {
     await savePost();
     await api(`/api/posts/${currentPostId}/publish`, { method: "POST" });
-    postFilter = "published";
-    document.querySelectorAll(".post-filter-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.filter === "published");
-    });
-    await loadPosts({ reset: true });
+    await reloadPostList();
     await selectPost(currentPostId);
     showAlert("Пост опубликован!", "success");
   } catch (err) {
@@ -608,15 +654,6 @@ document.getElementById("post-list").addEventListener("click", (event) => {
   const item = event.target.closest(".post-item");
   if (!item?.dataset?.id) return;
   selectPost(Number(item.dataset.id));
-});
-
-document.getElementById("post-list-scroll")?.addEventListener("scroll", () => {
-  const container = document.getElementById("post-list-scroll");
-  if (!container || loadingPosts || !hasMorePosts) return;
-  const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
-  if (remaining < 48) {
-    loadPosts().catch((err) => showAlert(err.message || "Не удалось загрузить посты"));
-  }
 });
 
 document.getElementById("settings-form").addEventListener("submit", saveTelegramSettings);
