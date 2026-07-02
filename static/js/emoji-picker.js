@@ -42,6 +42,7 @@
       window.previewEditor?.syncToTextarea?.();
     }
 
+    window.editorHistory?.beforeChange?.();
     const start = textarea.selectionStart ?? textarea.value.length;
     const end = textarea.selectionEnd ?? start;
     textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
@@ -49,7 +50,7 @@
     textarea.setSelectionRange(pos, pos);
     textarea.focus();
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    window.editorHistory?.onEdit?.();
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.();
   }
 

@@ -19,12 +19,20 @@
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
       window.leftEditor.syncToTextarea?.({ force: true, silent: true });
-    }
-    window.editorHistory?.onEdit?.();
-    if (window.leftEditor?.isVisualMode?.()) {
       window.leftEditor.refreshFromMarkdown?.();
     }
     window.refreshPreview?.();
+  }
+
+  function replaceExactSelection(textarea, start, end, text, selectStart, selectEnd) {
+    window.editorHistory?.beforeChange?.();
+    const value = textarea.value;
+    textarea.value = value.substring(0, start) + text + value.substring(end);
+    const selStart = selectStart ?? start;
+    const selEnd = selectEnd ?? selStart;
+    setSelectionRange(textarea, selStart, selEnd);
+    notifyContentChange(textarea);
+    window.editorHistory?.afterChange?.();
   }
 
   function saveTextareaSelection() {
@@ -117,15 +125,6 @@
       end,
       selected: value.substring(start, end),
     };
-  }
-
-  function replaceExactSelection(textarea, start, end, text, selectStart, selectEnd) {
-    const value = textarea.value;
-    textarea.value = value.substring(0, start) + text + value.substring(end);
-    const selStart = selectStart ?? start;
-    const selEnd = selectEnd ?? selStart;
-    setSelectionRange(textarea, selStart, selEnd);
-    notifyContentChange(textarea);
   }
 
   function ensureMarkdownSelection() {
@@ -326,6 +325,8 @@
     const textarea = getTextarea();
     if (!textarea || textarea.readOnly) return;
 
+    window.editorHistory?.beforeChange?.();
+
     const { start, end } = getSelectionRange(textarea);
     let before = textarea.value.substring(0, start);
     let after = textarea.value.substring(end);
@@ -345,6 +346,7 @@
     const pos = before.length + insertion.length;
     setSelectionRange(textarea, pos, pos);
     notifyContentChange(textarea);
+    window.editorHistory?.afterChange?.();
   }
 
   function buildMediaMarkdown(url, caption) {

@@ -48,6 +48,8 @@
     applying = false;
     baseline = value;
     editSessionActive = false;
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
   }
 
   function pushUndo(snapshot) {
@@ -66,7 +68,8 @@
     editSessionActive = false;
   }
 
-  function onEdit() {
+  /** Группирует быстрый набор текста в один шаг истории. */
+  function onTyping() {
     if (applying || !enabled) return;
 
     const textarea = getTextarea();
@@ -89,10 +92,33 @@
     updateButtons();
   }
 
+  /** Снимок перед форматированием, вставкой кнопкой и т.п. */
+  function beforeChange() {
+    if (applying || !enabled) return false;
+
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return false;
+
+    flushPendingSession();
+    pushUndo(readContent());
+    redoStack = [];
+    editSessionActive = false;
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+    updateButtons();
+    return true;
+  }
+
+  function afterChange() {
+    if (applying || !enabled) return;
+    baseline = readContent();
+    updateButtons();
+  }
+
   function onTextareaInput() {
     if (window.leftEditor?.isVisualMode?.()) return;
     if (window.previewEditor?.isEditing?.()) return;
-    onEdit();
+    onTyping();
   }
 
   function undo() {
@@ -227,7 +253,9 @@
       reset,
       setEnabled,
       updateButtons,
-      onEdit,
+      onTyping,
+      beforeChange,
+      afterChange,
     };
 
     reset("");

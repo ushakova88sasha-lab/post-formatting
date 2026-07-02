@@ -72,7 +72,7 @@
       textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     }
     if (trackHistory) {
-      window.editorHistory?.onEdit?.();
+      window.editorHistory?.onTyping?.();
     }
   }
 
@@ -291,10 +291,12 @@
 
   function applyCommand(command) {
     if (!restoreSelection()) return false;
+    window.editorHistory?.beforeChange?.();
     document.execCommand(command, false, null);
     saveSelection();
     dirty = true;
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.(true);
     return true;
   }
@@ -309,10 +311,13 @@
     const range = sel.getRangeAt(0);
     if (range.collapsed) return false;
 
+    window.editorHistory?.beforeChange?.();
+
     if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
       saveSelection();
       dirty = true;
-      syncToTextarea({ silent: true, trackHistory: true });
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
       window.refreshPreview?.(true);
       return true;
     }
@@ -333,7 +338,8 @@
     sel.addRange(range);
     saveSelection();
     dirty = true;
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.(true);
     return true;
   }
@@ -352,6 +358,8 @@
 
     const vf = window.visualFormat;
     if (!vf) return false;
+
+    window.editorHistory?.beforeChange?.();
 
     let applied = false;
     switch (action) {
@@ -387,7 +395,8 @@
     saveSelection();
     dirty = true;
     updateEmptyState(messageEl);
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.(true);
     return true;
   }
@@ -411,7 +420,7 @@
     selWrap.appendChild(range.cloneContents());
     const selMd = serialize(selWrap);
 
-    syncToTextarea({ force: true });
+    syncToTextarea({ force: true, silent: true });
     const value = textarea.value;
 
     if (selMd) {
@@ -461,6 +470,8 @@
     const plain = range.toString();
     if (!plain && range.collapsed) return false;
 
+    window.editorHistory?.beforeChange?.();
+
     range.deleteContents();
     const textNode = document.createTextNode(plain);
     range.insertNode(textNode);
@@ -471,7 +482,8 @@
 
     dirty = true;
     updateEmptyState(messageEl);
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.(true);
     return true;
   }
@@ -501,6 +513,8 @@
     if (!messageEl) return false;
     if (textarea && document.activeElement === textarea) return false;
 
+    window.editorHistory?.beforeChange?.();
+
     if (savedRange) {
       messageEl.focus();
       dismissPlaceholder(messageEl);
@@ -514,7 +528,8 @@
         }
       }
       dirty = true;
-      syncToTextarea({ silent: true, trackHistory: true });
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
       window.refreshPreview?.(true);
       return true;
     }
@@ -525,7 +540,8 @@
       document.execCommand("insertText", false, text);
       saveSelection();
       dirty = true;
-      syncToTextarea({ silent: true, trackHistory: true });
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
       window.refreshPreview?.(true);
       return true;
     }

@@ -333,10 +333,12 @@
   function applyCommand(command) {
     if (!restoreSelection()) return false;
 
+    window.editorHistory?.beforeChange?.();
     document.execCommand(command, false, null);
     savePreviewSelection();
     dirty = true;
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.();
     return true;
   }
@@ -351,10 +353,13 @@
     const range = sel.getRangeAt(0);
     if (range.collapsed) return false;
 
+    window.editorHistory?.beforeChange?.();
+
     if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
       savePreviewSelection();
       dirty = true;
-      syncToTextarea({ silent: true, trackHistory: true });
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
       window.refreshPreview?.();
       return true;
     }
@@ -377,7 +382,8 @@
     sel.addRange(range);
     savePreviewSelection();
     dirty = true;
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.();
     return true;
   }
@@ -483,7 +489,7 @@
       textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     }
     if (trackHistory) {
-      window.editorHistory?.onEdit?.();
+      window.editorHistory?.onTyping?.();
     }
   }
 
@@ -514,6 +520,8 @@
     const plain = range.toString();
     if (!plain && range.collapsed) return false;
 
+    window.editorHistory?.beforeChange?.();
+
     range.deleteContents();
     const textNode = document.createTextNode(plain);
     range.insertNode(textNode);
@@ -524,7 +532,8 @@
 
     dirty = true;
     updateEmptyState(messageEl);
-    syncToTextarea({ silent: true, trackHistory: true });
+    syncToTextarea({ silent: true });
+    window.editorHistory?.afterChange?.();
     window.refreshPreview?.(true);
     return true;
   }
@@ -567,6 +576,8 @@
       return false;
     }
 
+    window.editorHistory?.beforeChange?.();
+
     if (savedPreviewRange) {
       messageEl.focus();
       dismissPlaceholder(messageEl);
@@ -582,7 +593,8 @@
       }
 
       dirty = true;
-      syncToTextarea({ silent: true, trackHistory: true });
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
       return true;
     }
 
@@ -592,7 +604,8 @@
       document.execCommand("insertText", false, text);
       savePreviewSelection();
       dirty = true;
-      syncToTextarea({ silent: true, trackHistory: true });
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
       return true;
     }
 
