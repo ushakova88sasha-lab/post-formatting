@@ -33,9 +33,9 @@
       <div class="monthly-stats-chart">${bars}</div>`;
   }
 
-  function renderClickList(title, items, emptyText) {
+  function renderClickList(title, items) {
     if (!items?.length) {
-      return `<div class="post-stats-block"><h4>${escapeHtml(title)}</h4><p class="field-hint">${escapeHtml(emptyText)}</p></div>`;
+      return "";
     }
 
     const rows = items
@@ -78,6 +78,13 @@
       ? `<p class="field-hint post-stats-note">${escapeHtml(channel.note)}</p>`
       : "";
 
+    const trackingBlock = data.tracking?.enabled
+      ? `<div class="post-stats-block post-stats-tracking">
+        <h4>UTM-трекер</h4>
+        <p class="field-hint">utm_source=${escapeHtml(data.tracking.utm_source)}, utm_medium=${escapeHtml(data.tracking.utm_medium)}, utm_campaign=${escapeHtml(data.tracking.utm_campaign)}</p>
+      </div>`
+      : "";
+
     container.innerHTML = `
       <div class="post-stats-grid">
         <div class="post-stats-metric"><span>Опубликован</span><strong>${escapeHtml(window.moscowTime?.formatMoscowDateTime?.(data.published_at) || data.published_at || "—")}</strong></div>
@@ -86,16 +93,9 @@
         ${subscribers}
       </div>
       ${note}
-      ${renderClickList("Кнопки", data.buttons, "Кнопок нет")}
-      ${renderClickList("Ссылки в тексте", data.links, "Отслеживаемых ссылок в тексте нет")}
-      <div class="post-stats-block post-stats-tracking">
-        <h4>UTM-трекер</h4>
-        <p class="field-hint">${
-          data.tracking?.enabled
-            ? `utm_source=${escapeHtml(data.tracking.utm_source)}, utm_medium=${escapeHtml(data.tracking.utm_medium)}, utm_campaign=${escapeHtml(data.tracking.utm_campaign)}`
-            : "UTM-метки отключены"
-        }</p>
-      </div>`;
+      ${renderClickList("Кнопки", data.buttons)}
+      ${renderClickList("Ссылки в тексте", data.links)}
+      ${trackingBlock}`;
   }
 
   async function loadMonthlyStats(api) {
