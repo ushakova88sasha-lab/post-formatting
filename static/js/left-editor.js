@@ -296,11 +296,20 @@
   function wrapSelection(tagName, className) {
     if (!restoreSelection()) return false;
 
+    const messageEl = getMessage();
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return false;
+    if (!sel || sel.rangeCount === 0 || !messageEl) return false;
 
     const range = sel.getRangeAt(0);
     if (range.collapsed) return false;
+
+    if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
+      saveSelection();
+      dirty = true;
+      syncToTextarea();
+      window.refreshPreview?.(true);
+      return true;
+    }
 
     const el = document.createElement(tagName);
     if (className) el.className = className;
@@ -320,6 +329,102 @@
     dirty = true;
     syncToTextarea();
     window.refreshPreview?.(true);
+    return true;
+  }
+
+  function applyBlockFormat(action) {
+    if (!isVisualMode() || !editable || !hasSelection()) return false;
+
+    const messageEl = getMessage();
+    if (!messageEl || !restoreSelection()) return false;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return false;
+
+    const vf = window.visualFormat;
+    if (!vf) return false;
+
+    let applied = false;
+    switch (action) {
+      case "h1":
+        applied = vf.toggleBlockTag(range, messageEl, "h1");
+        break;
+      case "h2":
+        applied = vf.toggleBlockTag(range, messageEl, "h2");
+        break;
+      case "h3":
+        applied = vf.toggleBlockTag(range, messageEl, "h3");
+        break;
+      case "quote":
+        applied = vf.toggleQuote(range, messageEl);
+        break;
+      case "center":
+        applied = vf.toggleCenter(range, messageEl);
+        break;
+      case "ulist":
+        document.execCommand("insertUnorderedList", false, null);
+        applied = true;
+        break;
+      case "olist":
+        document.execCommand("insertOrderedList", false, null);
+        applied = true;
+        break;
+      default:
+        return false;
+    }
+
+    if (!applied) return false;
+
+    saveSelection();
+    dirty = true;
+    updateEmptyState(messageEl);
+    syncToTextarea();
+    window.refreshPreview?.(true);
+    return true;
+  }
+
+  function mapSelectionToTextarea() {
+    if (!isVisualMode() || !hasSelection()) return false;
+
+    const messageEl = getMessage();
+    const textarea = getTextarea();
+    if (!messageEl || !textarea) return false;
+    if (!restoreSelection()) return false;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return false;
+
+    const selWrap = document.createElement("div");
+    selWrap.className = "tg-message tg-rich";
+    selWrap.appendChild(range.cloneContents());
+    const selMd = serialize(selWrap);
+
+    syncToTextarea({ force: true });
+    const value = textarea.value;
+
+    if (selMd) {
+      const idx = value.indexOf(selMd);
+      if (idx !== -1) {
+        textarea.focus();
+        textarea.setSelectionRange(idx, idx + selMd.length);
+        return true;
+      }
+    }
+
+    const plain = range.toString();
+    if (!plain) return false;
+
+    const idx = value.indexOf(plain);
+    if (idx === -1) return false;
+
+    textarea.focus();
+    textarea.setSelectionRange(idx, idx + plain.length);
     return true;
   }
 
@@ -472,6 +577,10 @@
     }
   }
 
+  function saveSelectionPublic() {
+    saveSelection();
+  }
+
   function init() {
     document.querySelectorAll(".editor-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -501,7 +610,10 @@
       syncToTextarea,
       refreshFromMarkdown,
       hasSelection,
+      saveSelection: saveSelectionPublic,
       applyFormat,
+      applyBlockFormat,
+      mapSelectionToTextarea,
       clearFormatting,
       insertText,
     };

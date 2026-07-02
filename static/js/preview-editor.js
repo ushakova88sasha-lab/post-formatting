@@ -344,11 +344,20 @@
   function wrapSelection(tagName, className) {
     if (!restoreSelection()) return false;
 
+    const messageEl = getMessage();
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return false;
+    if (!sel || sel.rangeCount === 0 || !messageEl) return false;
 
     const range = sel.getRangeAt(0);
     if (range.collapsed) return false;
+
+    if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
+      savePreviewSelection();
+      dirty = true;
+      syncToTextarea();
+      window.refreshPreview?.();
+      return true;
+    }
 
     const el = document.createElement(tagName);
     if (className) {
@@ -600,6 +609,7 @@
       insertText,
       messageToMarkdown,
       hasSelection,
+      savePreviewSelection,
       applyCommand,
       wrapSelection,
       clearFormatting,

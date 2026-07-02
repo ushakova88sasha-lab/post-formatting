@@ -2,7 +2,6 @@
  * Панель форматирования: текст, блоки, изображения.
  */
 (function () {
-  const HEADER_RE = /^(#{1,3})\s+(.*)$/;
   const CENTER_BLOCK_RE =
     /^(?:<aside>|<pullquote>|<p style="text-align:\s*center">)([\s\S]*)(?:<\/aside>|<\/pullquote>|<\/p>)$/i;
 
@@ -101,17 +100,106 @@
     return result;
   }
 
-  function clearMarkdownFormatting() {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
+  function getExactSelection(textarea) {
+    if (!textarea || textarea.readOnly) return null;
+    const { start, end } = getSelectionRange(textarea);
+    if (start === end) return null;
+    const value = textarea.value;
+    return {
+      textarea,
+      value,
+      start,
+      end,
+      selected: value.substring(start, end),
+    };
+  }
 
-    const { value, start, end } = getLinesRange(textarea);
-    const block = value.substring(start, end);
-    const cleared = stripMarkdownFormatting(block);
-
-    textarea.value = value.substring(0, start) + cleared + value.substring(end);
-    setSelectionRange(textarea, start, start + cleared.length);
+  function replaceExactSelection(textarea, start, end, text, selectStart, selectEnd) {
+    const value = textarea.value;
+    textarea.value = value.substring(0, start) + text + value.substring(end);
+    const selStart = selectStart ?? start;
+    const selEnd = selectEnd ?? selStart;
+    setSelectionRange(textarea, selStart, selEnd);
     notifyContentChange(textarea);
+  }
+
+  function ensureMarkdownSelection() {
+    if (window.leftEditor?.isVisualMode?.()) {
+      if (!window.leftEditor.hasSelection?.()) return null;
+      if (!window.leftEditor.mapSelectionToTextarea?.()) return null;
+    }
+    return getExactSelection(getTextarea());
+  }
+
+  function applySelectedTransform(transform) {
+    const sel = ensureMarkdownSelection();
+    if (!sel) return false;
+    const newText = transform(sel.selected);
+    if (newText === null || newText === undefined) return false;
+    replaceExactSelection(sel.textarea, sel.start, sel.end, newText, sel.start, sel.start + newText.length);
+    return true;
+  }
+
+  function toggleMarkdownWrap(before, after, unwrapFn) {
+    const sel = ensureMarkdownSelection();
+    if (!sel) return false;
+
+    const { textarea, value, start, end, selected } = sel;
+
+    if (
+      selected.length >= before.length + after.length &&
+      selected.startsWith(before) &&
+      selected.endsWith(after)
+    ) {
+      const inner = selected.slice(before.length, selected.length - after.length);
+      replaceExactSelection(textarea, start, end, inner, start, start + inner.length);
+      return true;
+    }
+
+    if (
+      start >= before.length &&
+      value.substring(start - before.length, start) === before &&
+      value.substring(end, end + after.length) === after
+    ) {
+      const newStart = start - before.length;
+      replaceExactSelection(
+        textarea,
+        newStart,
+        end + after.length,
+        selected,
+        newStart,
+        newStart + selected.length
+      );
+      return true;
+    }
+
+    if (unwrapFn) {
+      const inner = unwrapFn(selected);
+      if (inner !== null) {
+        replaceExactSelection(textarea, start, end, inner, start, start + inner.length);
+        return true;
+      }
+    }
+
+    const wrapped = before + selected + after;
+    replaceExactSelection(
+      textarea,
+      start,
+      end,
+      wrapped,
+      start + before.length,
+      start + before.length + selected.length
+    );
+    return true;
+  }
+
+  function clearMarkdownFormatting() {
+    return applySelectedTransform((selected) => stripMarkdownFormatting(selected));
+  }
+
+  function tryVisualBlockFormat(action) {
+    if (!window.leftEditor?.isVisualMode?.()) return false;
+    return Boolean(window.leftEditor?.applyBlockFormat?.(action));
   }
 
   function tryPreviewFormat(action) {
@@ -141,23 +229,6 @@
     return false;
   }
 
-  function getLinesRange(textarea) {
-    const value = textarea.value;
-    let { start, end } = getSelectionRange(textarea);
-
-    if (start === end) {
-      start = value.lastIndexOf("\n", start - 1) + 1;
-      end = value.indexOf("\n", end);
-      if (end === -1) end = value.length;
-    } else {
-      start = value.lastIndexOf("\n", start - 1) + 1;
-      const endLine = value.indexOf("\n", end);
-      end = endLine === -1 ? value.length : endLine;
-    }
-
-    return { value, start, end };
-  }
-
   function stripListMarker(line) {
     return line
       .replace(/^(\s*)[-*+]\s+\[[ xX]\]\s+/, "$1")
@@ -165,36 +236,42 @@
       .replace(/^(\s*)\d+\.\s+/, "$1");
   }
 
-  function applyLinesTransform(transform) {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
-
-    const { value, start, end } = getLinesRange(textarea);
-    const block = value.substring(start, end);
-    const lines = block.split("\n");
-    const newLines = lines.map((line, idx) => transform(line, idx));
-    const newBlock = newLines.join("\n");
-
-    textarea.value = value.substring(0, start) + newBlock + value.substring(end);
-    setSelectionRange(textarea, start, start + newBlock.length);
-    notifyContentChange(textarea);
-  }
-
   function applyBulletList() {
-    applyLinesTransform((line) => `- ${stripListMarker(line)}`);
+    applySelectedTransform((selected) => {
+      const lines = selected.split("\n");
+      const allBullets = lines.every(
+        (line) => /^[-*+]\s+/.test(line) && !/^[-*+]\s+\[[ xX]\]/.test(line)
+      );
+      return lines
+        .map((line) =>
+          allBullets ? stripListMarker(line) : `- ${stripListMarker(line)}`
+        )
+        .join("\n");
+    });
   }
 
   function applyOrderedList() {
-    let n = 0;
-    applyLinesTransform((line) => {
-      n += 1;
-      return `${n}. ${stripListMarker(line)}`;
+    applySelectedTransform((selected) => {
+      const lines = selected.split("\n");
+      const allOrdered = lines.every((line) => /^\d+\.\s+/.test(line));
+      if (allOrdered) {
+        return lines.map((line) => stripListMarker(line)).join("\n");
+      }
+      return lines
+        .map((line, idx) => `${idx + 1}. ${stripListMarker(line)}`)
+        .join("\n");
     });
   }
 
   function applyChecklist(checked) {
     const prefix = checked ? "- [x] " : "- [ ] ";
-    applyLinesTransform((line) => prefix + stripListMarker(line));
+    applySelectedTransform((selected) => {
+      const lines = selected.split("\n");
+      const allMatch = lines.every((line) => line.startsWith(prefix));
+      return lines
+        .map((line) => (allMatch ? stripListMarker(line) : prefix + stripListMarker(line)))
+        .join("\n");
+    });
   }
 
   async function insertTable() {
@@ -223,55 +300,21 @@
     insertBlockAtCursor(table.trimEnd());
   }
 
-  function stripHeader(line) {
-    const match = line.match(HEADER_RE);
-    return match ? match[2] : line;
-  }
-
-  function getHeaderLevel(line) {
-    const match = line.match(HEADER_RE);
-    return match ? match[1].length : 0;
-  }
-
   function applyHeader(level) {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
-
-    const { value, start, end } = getLinesRange(textarea);
-    const block = value.substring(start, end);
-    const lines = block.split("\n");
-
-    const newLines = lines.map((line) => {
-      const content = stripHeader(line);
-      const current = getHeaderLevel(line);
-      if (current === level) {
-        return content;
-      }
-      return "#".repeat(level) + " " + content;
+    applySelectedTransform((selected) => {
+      const lines = selected.split("\n");
+      const prefix = "#".repeat(level) + " ";
+      return lines
+        .map((line) => {
+          const match = line.match(/^(#{1,3})\s+(.*)$/);
+          if (match && match[1].length === level) {
+            return match[2];
+          }
+          const content = match ? match[2] : line;
+          return prefix + content;
+        })
+        .join("\n");
     });
-
-    const newBlock = newLines.join("\n");
-    textarea.value = value.substring(0, start) + newBlock + value.substring(end);
-    setSelectionRange(textarea, start, start + newBlock.length);
-    notifyContentChange(textarea);
-  }
-
-  function wrapSelection(before, after) {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
-
-    const { start, end } = getSelectionRange(textarea);
-    const value = textarea.value;
-    const selected = value.substring(start, end);
-    const inner = selected || "текст";
-
-    const newValue = value.substring(0, start) + before + inner + after + value.substring(end);
-    textarea.value = newValue;
-
-    const cursorStart = start + before.length;
-    const cursorEnd = cursorStart + inner.length;
-    setSelectionRange(textarea, cursorStart, cursorEnd);
-    notifyContentChange(textarea);
   }
 
   function insertBlockAtCursor(block) {
@@ -308,32 +351,25 @@
   }
 
   function insertQuote() {
-    applyLinesTransform((line) => {
-      if (/^\s*>/.test(line)) return line;
-      return `> ${line}`;
+    applySelectedTransform((selected) => {
+      const lines = selected.split("\n");
+      const allQuoted = lines.every((line) => /^> ?/.test(line));
+      return lines
+        .map((line) => (allQuoted ? line.replace(/^> ?/, "") : `> ${line}`))
+        .join("\n");
     });
   }
 
   function applyCenter() {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
-
-    const { value, start, end } = getLinesRange(textarea);
-    const block = value.substring(start, end);
-    const match = block.match(CENTER_BLOCK_RE);
-    const newBlock = match ? match[1] : `<aside>${block}</aside>`;
-
-    textarea.value = value.substring(0, start) + newBlock + value.substring(end);
-    setSelectionRange(textarea, start, start + newBlock.length);
-    notifyContentChange(textarea);
+    applySelectedTransform((selected) => {
+      const match = selected.match(CENTER_BLOCK_RE);
+      return match ? match[1] : `<aside>${selected}</aside>`;
+    });
   }
 
   async function insertDetails() {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
-
-    const { start, end } = getSelectionRange(textarea);
-    const selected = textarea.value.substring(start, end);
+    const sel = ensureMarkdownSelection();
+    if (!sel) return;
 
     const summary = await window.appModal.prompt({
       title: "Скрывающийся блок",
@@ -343,14 +379,26 @@
     });
     if (summary === null) return;
 
-    const content = selected || "Скрытый текст…";
-    const block = `<details><summary>${summary.trim()}</summary>\n${content}\n</details>`;
-    insertBlockAtCursor(block);
+    const block = `<details><summary>${summary.trim()}</summary>\n${sel.selected}\n</details>`;
+    replaceExactSelection(sel.textarea, sel.start, sel.end, block, sel.start, sel.start + block.length);
   }
 
   async function insertLink() {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
+    const sel = ensureMarkdownSelection();
+    if (!sel) return;
+
+    const linkMatch = sel.selected.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (linkMatch) {
+      replaceExactSelection(
+        sel.textarea,
+        sel.start,
+        sel.end,
+        linkMatch[1],
+        sel.start,
+        sel.start + linkMatch[1].length
+      );
+      return;
+    }
 
     const url = await window.appModal.prompt({
       title: "Ссылка",
@@ -360,27 +408,19 @@
     });
     if (!url) return;
 
-    const { start, end } = getSelectionRange(textarea);
-    const selected = textarea.value.substring(start, end) || "ссылка";
-    const link = `[${selected}](${url.trim()})`;
-
-    textarea.value = textarea.value.substring(0, start) + link + textarea.value.substring(end);
-    const pos = start + link.length;
-    setSelectionRange(textarea, pos, pos);
-    notifyContentChange(textarea);
+    const link = `[${sel.selected}](${url.trim()})`;
+    replaceExactSelection(
+      sel.textarea,
+      sel.start,
+      sel.end,
+      link,
+      sel.start + 1,
+      sel.start + 1 + sel.selected.length
+    );
   }
 
   function wrapMath() {
-    const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) return;
-
-    const { start, end } = getSelectionRange(textarea);
-    const selected = textarea.value.substring(start, end);
-    const inner = selected || "E=mc^2";
-
-    textarea.value = textarea.value.substring(0, start) + "$" + inner + "$" + textarea.value.substring(end);
-    setSelectionRange(textarea, start + 1, start + 1 + inner.length);
-    notifyContentChange(textarea);
+    toggleMarkdownWrap("$", "$");
   }
 
   function showMediaCaptionDialog({ url, kind, filename }) {
@@ -586,6 +626,9 @@
     if (tryPreviewFormat(action)) {
       return;
     }
+    if (tryVisualBlockFormat(action)) {
+      return;
+    }
     switch (action) {
       case "h1":
         applyHeader(1);
@@ -597,28 +640,28 @@
         applyHeader(3);
         break;
       case "bold":
-        wrapSelection("**", "**");
+        toggleMarkdownWrap("**", "**");
         break;
       case "italic":
-        wrapSelection("_", "_");
+        toggleMarkdownWrap("_", "_");
         break;
       case "strike":
-        wrapSelection("~~", "~~");
+        toggleMarkdownWrap("~~", "~~");
         break;
       case "underline":
-        wrapSelection("<u>", "</u>");
+        toggleMarkdownWrap("<u>", "</u>");
         break;
       case "marker":
-        wrapSelection("==", "==");
+        toggleMarkdownWrap("==", "==");
         break;
       case "spoiler":
-        wrapSelection("||", "||");
+        toggleMarkdownWrap("||", "||");
         break;
       case "code":
-        wrapSelection("`", "`");
+        toggleMarkdownWrap("`", "`");
         break;
       case "sub":
-        wrapSelection("<sub>", "</sub>");
+        toggleMarkdownWrap("<sub>", "</sub>");
         break;
       case "math":
         wrapMath();
@@ -664,6 +707,8 @@
       toolbar.addEventListener("mousedown", (e) => {
         if (e.target.closest(".fmt-btn")) {
           e.preventDefault();
+          window.leftEditor?.saveSelection?.();
+          window.previewEditor?.savePreviewSelection?.();
         }
       });
       toolbar.addEventListener("click", handleToolbarClick);
