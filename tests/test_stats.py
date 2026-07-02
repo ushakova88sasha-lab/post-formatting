@@ -23,7 +23,7 @@ def test_publish_logs_monthly_stats(client, auth_cookies):
 
     with patch("app.routers.posts.publish_post_to_telegram", new_callable=AsyncMock) as publish_mock:
         publish_mock.return_value = 42
-        with patch("app.publish.refresh_post_channel_stats", new_callable=AsyncMock):
+        with patch("app.publish.capture_channel_stats_at_publish", new_callable=AsyncMock):
             response = client.post(f"/api/posts/{post['id']}/publish", cookies=auth_cookies)
 
     assert response.status_code == 200
@@ -64,7 +64,7 @@ def test_content_link_tracking_and_click(client, auth_cookies):
 
     with patch("app.publish.send_message", new_callable=AsyncMock) as send_mock:
         send_mock.return_value = 100
-        with patch("app.publish.refresh_post_channel_stats", new_callable=AsyncMock):
+        with patch("app.publish.capture_channel_stats_at_publish", new_callable=AsyncMock):
             client.post(f"/api/posts/{post['id']}/publish", cookies=auth_cookies)
 
     db = SessionLocal()
@@ -155,7 +155,7 @@ def test_published_log_survives_post_deletion(client, auth_cookies):
 
     with patch("app.routers.posts.publish_post_to_telegram", new_callable=AsyncMock) as publish_mock:
         publish_mock.return_value = 77
-        with patch("app.publish.refresh_post_channel_stats", new_callable=AsyncMock):
+        with patch("app.publish.capture_channel_stats_at_publish", new_callable=AsyncMock):
             client.post(f"/api/posts/{post['id']}/publish", cookies=auth_cookies)
 
     client.delete(f"/api/posts/{post['id']}", cookies=auth_cookies)

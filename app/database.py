@@ -114,6 +114,7 @@ class PostChannelStats(Base):
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True)
     views: Mapped[int | None] = mapped_column(nullable=True)
     forwards: Mapped[int | None] = mapped_column(nullable=True)
+    channel_subscribers_at_publish: Mapped[int | None] = mapped_column(nullable=True)
     reactions_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -159,6 +160,14 @@ def _migrate_schema() -> None:
                     "WHERE visitor_hash IS NULL OR visitor_hash = ''"
                 )
             )
+
+    if "post_channel_stats" in inspector.get_table_names():
+        stats_columns = {column["name"] for column in inspector.get_columns("post_channel_stats")}
+        if "channel_subscribers_at_publish" not in stats_columns:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE post_channel_stats ADD COLUMN channel_subscribers_at_publish INTEGER")
+                )
 
 
 def init_db() -> None:

@@ -70,8 +70,8 @@
       : "—";
 
     const subscribers =
-      channel.channel_subscribers != null
-        ? `<div class="post-stats-metric"><span>Подписчиков канала</span><strong>${channel.channel_subscribers}</strong></div>`
+      channel.channel_subscribers_at_publish != null
+        ? `<div class="post-stats-metric"><span>Подписчиков на момент публикации</span><strong>${channel.channel_subscribers_at_publish}</strong></div>`
         : "";
 
     const note = channel.note

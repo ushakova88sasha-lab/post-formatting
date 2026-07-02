@@ -7,6 +7,11 @@ from sqlalchemy.orm import Session
 from app.database import Post, PostChannelStats
 from app.settings_store import get_bot_token, get_channel_id
 
+_STATS_NOTE = (
+    "Просмотры и пересылки отдельного поста Telegram Bot API не отдаёт. "
+    "Откройте пост по ссылке в Telegram для просмотра статистики канала."
+)
+
 
 def _channel_slug(channel_id: str) -> str | None:
     channel = (channel_id or "").strip()
@@ -65,19 +70,36 @@ async def _fetch_channel_username(token: str, channel_id: str) -> str | None:
     return username if username else None
 
 
-async def refresh_post_channel_stats(db: Session, post: Post) -> PostChannelStats:
-    token = get_bot_token(db)
-    channel_id = get_channel_id(db)
-
+def _get_or_create_stats(db: Session, post: Post) -> PostChannelStats:
     stats = post.channel_stats
     if not stats:
         stats = PostChannelStats(post_id=post.id)
         db.add(stats)
+    return stats
+
+
+def _read_extra(stats: PostChannelStats | None) -> dict:
+    if not stats or not stats.reactions_json:
+        return {}
+    try:
+        return json.loads(stats.reactions_json)
+    except json.JSONDecodeError:
+        return {}
+
+
+def _write_extra(stats: PostChannelStats, extra: dict) -> None:
+    stats.reactions_json = json.dumps(extra, ensure_ascii=False)
+
+
+async def capture_channel_stats_at_publish(db: Session, post: Post) -> PostChannelStats:
+    """Фиксирует подписчиков канала в момент публикации поста."""
+    token = get_bot_token(db)
+    channel_id = get_channel_id(db)
+    stats = _get_or_create_stats(db, post)
 
     stats.fetched_at = datetime.utcnow()
     stats.views = None
     stats.forwards = None
-    stats.reactions_json = None
 
     if not token or not channel_id:
         stats.error_message = "Укажите токен бота и канал в настройках"
@@ -89,8 +111,6 @@ async def refresh_post_channel_stats(db: Session, post: Post) -> PostChannelStat
         db.flush()
         return stats
 
-    subscribers = None
-    channel_username = None
     try:
         subscribers = await _fetch_channel_subscribers(token, channel_id)
         channel_username = await _fetch_channel_username(token, channel_id)
@@ -99,19 +119,54 @@ async def refresh_post_channel_stats(db: Session, post: Post) -> PostChannelStat
         db.flush()
         return stats
 
+    stats.channel_subscribers_at_publish = subscribers
     extra = {
-        "channel_subscribers": subscribers,
         "telegram_post_url": build_telegram_post_url(
             channel_id=channel_id,
             message_id=post.telegram_message_id,
             channel_username=channel_username,
         ),
-        "note": (
-            "Просмотры и пересылки отдельного поста Telegram Bot API не отдаёт. "
-            "Откройте пост по ссылке в Telegram для просмотра статистики канала."
-        ),
+        "note": _STATS_NOTE,
     }
-    stats.reactions_json = json.dumps(extra, ensure_ascii=False)
+    _write_extra(stats, extra)
+    stats.error_message = None
+    db.flush()
+    return stats
+
+
+async def refresh_post_channel_stats(db: Session, post: Post) -> PostChannelStats:
+    """Обновляет ссылку на пост, не меняя подписчиков на момент публикации."""
+    token = get_bot_token(db)
+    channel_id = get_channel_id(db)
+    stats = _get_or_create_stats(db, post)
+    extra = _read_extra(stats)
+
+    stats.fetched_at = datetime.utcnow()
+
+    if not token or not channel_id:
+        stats.error_message = "Укажите токен бота и канал в настройках"
+        db.flush()
+        return stats
+
+    if not post.telegram_message_id:
+        stats.error_message = "Пост ещё не опубликован в Telegram"
+        db.flush()
+        return stats
+
+    try:
+        channel_username = await _fetch_channel_username(token, channel_id)
+    except Exception as exc:
+        stats.error_message = f"Не удалось обновить данные канала: {exc}"
+        db.flush()
+        return stats
+
+    extra["telegram_post_url"] = build_telegram_post_url(
+        channel_id=channel_id,
+        message_id=post.telegram_message_id,
+        channel_username=channel_username,
+    )
+    extra.setdefault("note", _STATS_NOTE)
+    _write_extra(stats, extra)
     stats.error_message = None
     db.flush()
     return stats
@@ -119,12 +174,11 @@ async def refresh_post_channel_stats(db: Session, post: Post) -> PostChannelStat
 
 def channel_stats_to_dict(stats: PostChannelStats | None, post: Post, db: Session) -> dict:
     channel_id = get_channel_id(db)
-    extra: dict = {}
-    if stats and stats.reactions_json:
-        try:
-            extra = json.loads(stats.reactions_json)
-        except json.JSONDecodeError:
-            extra = {}
+    extra = _read_extra(stats)
+
+    subscribers = stats.channel_subscribers_at_publish if stats else None
+    if subscribers is None:
+        subscribers = extra.get("channel_subscribers")
 
     post_url = extra.get("telegram_post_url") or build_telegram_post_url(
         channel_id=channel_id,
@@ -134,7 +188,7 @@ def channel_stats_to_dict(stats: PostChannelStats | None, post: Post, db: Sessio
     return {
         "views": stats.views if stats else None,
         "forwards": stats.forwards if stats else None,
-        "channel_subscribers": extra.get("channel_subscribers"),
+        "channel_subscribers_at_publish": subscribers,
         "telegram_post_url": post_url,
         "note": extra.get("note"),
         "fetched_at": stats.fetched_at.isoformat() + "Z" if stats and stats.fetched_at else None,
