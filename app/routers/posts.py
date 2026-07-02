@@ -13,6 +13,7 @@ from app.buttons import (
 from app.config import settings
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
+from app.markdown_telegram import prepare_markdown_for_telegram
 from app.post_retention import purge_expired_posts
 from app.post_utils import (
     DEFAULT_POST_TITLE,
@@ -166,6 +167,11 @@ async def delete_post(post_id: int, db: Session = Depends(get_db), _: str = Depe
 @router.post("/preview")
 async def preview(payload: PreviewRequest, _: str = Depends(require_user)):
     return {"html": preview_html(payload.content)}
+
+
+@router.post("/export/telegram-markdown")
+async def export_telegram_markdown(payload: PreviewRequest, _: str = Depends(require_user)):
+    return {"markdown": prepare_markdown_for_telegram(payload.content)}
 
 
 @router.post("/{post_id}/publish")

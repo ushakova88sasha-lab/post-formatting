@@ -282,6 +282,32 @@ async function updatePreview(force = false) {
   }
 }
 
+async function copyTextToClipboard(text, plainOnly = false) {
+  if (!plainOnly && navigator.clipboard?.write && window.ClipboardItem) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/plain": new Blob([text], { type: "text/plain" }),
+      }),
+    ]);
+    return;
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
 async function copyPostHtml() {
   const content = document.getElementById("post-content").value;
   if (!content.trim()) {
@@ -307,23 +333,37 @@ async function copyPostHtml() {
           "text/plain": new Blob([html], { type: "text/plain" }),
         }),
       ]);
-    } else if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(html);
     } else {
-      const textarea = document.createElement("textarea");
-      textarea.value = html;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
+      await copyTextToClipboard(html, true);
     }
 
     showAlert("HTML скопирован", "success");
   } catch (err) {
     showAlert(err.message || "Не удалось скопировать HTML");
+  }
+}
+
+async function copyPostMarkdown() {
+  const content = document.getElementById("post-content").value;
+  if (!content.trim()) {
+    showAlert("Пост пустой");
+    return;
+  }
+
+  try {
+    const data = await api("/api/posts/export/telegram-markdown", {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+    if (!data?.markdown) {
+      showAlert("Не удалось получить Markdown");
+      return;
+    }
+
+    await copyTextToClipboard(data.markdown, true);
+    showAlert("Markdown скопирован", "success");
+  } catch (err) {
+    showAlert(err.message || "Не удалось скопировать Markdown");
   }
 }
 
@@ -458,6 +498,7 @@ document.getElementById("save-btn").addEventListener("click", savePost);
 document.getElementById("publish-btn").addEventListener("click", publishPost);
 document.getElementById("schedule-btn").addEventListener("click", schedulePost);
 document.getElementById("copy-html-btn").addEventListener("click", copyPostHtml);
+document.getElementById("copy-markdown-btn").addEventListener("click", copyPostMarkdown);
 
 document.querySelectorAll(".sidebar-tab").forEach((tab) => {
   tab.addEventListener("click", () => showView(tab.dataset.view));

@@ -662,8 +662,10 @@ select {
   font-style: italic;
 }
 
-.tg-message b { font-weight: 700; }
-.tg-message i { font-style: italic; }
+.tg-message b,
+.tg-message strong { font-weight: 700; }
+.tg-message i,
+.tg-message em { font-style: italic; }
 .tg-message s { text-decoration: line-through; }
 .tg-message h1 {
   font-size: 1.35rem;

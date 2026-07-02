@@ -87,6 +87,16 @@
 
 Ответ: `{ "html": "<div class=\"tg-message\">...</div>" }`
 
+### `POST /api/posts/export/telegram-markdown`
+
+Markdown в формате Telegram Rich Markdown (как при публикации через `sendRichMessage`): одиночные переносы строк превращаются в `<br>`, кнопки не включаются.
+
+```json
+{ "content": "Строка 1\nСтрока 2" }
+```
+
+Ответ: `{ "markdown": "Строка 1<br>\nСтрока 2" }`
+
 ### `POST /api/posts/{id}/publish`
 
 Немедленная публикация в канал.

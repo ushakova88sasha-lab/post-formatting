@@ -143,7 +143,7 @@ def _markdown_to_html(text: str) -> str:
 
 ALLOWED_TAG_RE = re.compile(
     r"<(/?)(?:figure|figcaption|img|video|audio|details|summary|blockquote|aside|cite|div|mark|span|br|"
-    r"table|thead|tbody|tr|th|td|ul|ol|li|p|h[1-3]|b|i|u|s|sub|sup|code|pre|a)(?:\s[^>]*)?>",
+    r"table|thead|tbody|tr|th|td|ul|ol|li|p|h[1-3]|b|strong|i|em|u|s|sub|sup|code|pre|a)(?:\s[^>]*)?>",
     re.IGNORECASE,
 )
 

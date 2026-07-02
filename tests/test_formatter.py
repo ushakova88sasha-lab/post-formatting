@@ -7,6 +7,12 @@ def test_marker_highlight_in_preview():
     assert '<mark class="tg-mark">маркером</mark>' in html
 
 
+def test_bold_in_preview():
+    html = preview_html("Текст **жирный** внутри")
+    assert "<strong>жирный</strong>" in html
+    assert "&lt;strong&gt;" not in html
+
+
 def test_center_align_in_preview():
     html = preview_html("<aside>По центру</aside>")
     assert "<aside>По центру</aside>" in html
