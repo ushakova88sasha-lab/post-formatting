@@ -282,6 +282,51 @@ async function updatePreview(force = false) {
   }
 }
 
+async function copyPostHtml() {
+  const content = document.getElementById("post-content").value;
+  if (!content.trim()) {
+    showAlert("Пост пустой");
+    return;
+  }
+
+  try {
+    const data = await api("/api/posts/preview", {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+    if (!data?.html) {
+      showAlert("Не удалось получить HTML");
+      return;
+    }
+
+    const html = data.html;
+    if (navigator.clipboard?.write && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([html], { type: "text/plain" }),
+        }),
+      ]);
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(html);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = html;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+
+    showAlert("HTML скопирован", "success");
+  } catch (err) {
+    showAlert(err.message || "Не удалось скопировать HTML");
+  }
+}
+
 async function createPost() {
   if (currentView !== "posts") {
     showView("posts");
@@ -412,6 +457,7 @@ document.getElementById("empty-new-btn").addEventListener("click", createPost);
 document.getElementById("save-btn").addEventListener("click", savePost);
 document.getElementById("publish-btn").addEventListener("click", publishPost);
 document.getElementById("schedule-btn").addEventListener("click", schedulePost);
+document.getElementById("copy-html-btn").addEventListener("click", copyPostHtml);
 
 document.querySelectorAll(".sidebar-tab").forEach((tab) => {
   tab.addEventListener("click", () => showView(tab.dataset.view));
