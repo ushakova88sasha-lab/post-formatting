@@ -6,7 +6,7 @@
   <title>Telegram Admin — Редактор постов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=11">
+  <link rel="stylesheet" href="/static/css/style.css?v=12">
 </head>
 <body>
   <header class="header">
@@ -158,6 +158,7 @@
                 <div id="preview-content">
                   <div class="tg-message"><p class="empty">Начните вводить текст…</p></div>
                 </div>
+                <div id="preview-buttons" class="tg-inline-keyboard hidden"></div>
               </div>
             </div>
           </div>
@@ -169,6 +170,17 @@
           <span class="field-hint schedule-hint">Время по Москве (UTC+3)</span>
           <button class="btn btn-secondary" id="schedule-btn">Запланировать</button>
         </div>
+
+        <section class="buttons-section" id="buttons-section">
+          <div class="buttons-header">
+            <div>
+              <h3 class="buttons-title">Кнопки под постом</h3>
+              <p class="field-hint buttons-hint">Клики считаются через редирект с вашего сервера (нужен PUBLIC_BASE_URL).</p>
+            </div>
+            <button type="button" class="btn btn-secondary" id="add-button-btn">+ Кнопка</button>
+          </div>
+          <div id="buttons-list" class="buttons-list"></div>
+        </section>
 
         <p class="markdown-hint">
           Медиа: 📷 🎬 🎵. Эмодзи 😀. Маркер <mark class="fmt-marker-icon">М</mark>, по центру ≡, цитата ❝, блок ▼. Списки и таблицы.
@@ -216,6 +228,7 @@
   <script src="/static/js/preview-editor.js?v=2"></script>
   <script src="/static/js/emoji-data.js?v=1"></script>
   <script src="/static/js/emoji-picker.js?v=3"></script>
-  <script src="/static/js/app.js?v=8"></script>
+  <script src="/static/js/post-buttons.js?v=1"></script>
+  <script src="/static/js/app.js?v=9"></script>
 </body>
 </html>

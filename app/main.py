@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import init_db
 from app.post_retention import purge_expired_posts_session
-from app.routers import auth, posts, settings as settings_router, uploads
+from app.routers import auth, clicks, posts, settings as settings_router, uploads
 from app.scheduler import start_scheduler, stop_scheduler
 from app.settings_store import get_channel_id
 from app.telegram_runtime import refresh_telegram_state
@@ -38,6 +38,7 @@ app = FastAPI(
 
 app.include_router(auth.router)
 app.include_router(posts.router)
+app.include_router(clicks.router)
 app.include_router(uploads.router)
 app.include_router(settings_router.router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

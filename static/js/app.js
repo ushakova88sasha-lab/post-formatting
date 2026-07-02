@@ -18,6 +18,8 @@ function showAlert(message, type = "error") {
   setTimeout(() => el.classList.add("hidden"), 5000);
 }
 
+window.showPostAlert = showAlert;
+
 function statusBadge(status) {
   const labels = {
     draft: "Черновик",
@@ -224,6 +226,7 @@ async function selectPost(id) {
   currentPostId = post.id;
   document.getElementById("post-title").value = post.title || "";
   document.getElementById("post-content").value = post.content || "";
+  window.postButtons?.setButtons(post.buttons || []);
 
   if (post.scheduled_at) {
     const d = window.moscowTime.parseUtcDate(post.scheduled_at);
@@ -240,6 +243,7 @@ async function selectPost(id) {
   document.getElementById("publish-btn").disabled = isPublished;
   document.getElementById("schedule-btn").disabled = isPublished;
   document.getElementById("save-btn").disabled = isPublished;
+  window.postButtons?.setReadOnly(isPublished, isPublished);
   if (window.editorToolbar) {
     window.editorToolbar.setToolbarEnabled(!isPublished);
   }
@@ -295,10 +299,11 @@ async function savePost() {
   if (!currentPostId) return;
   const title = document.getElementById("post-title").value;
   const content = document.getElementById("post-content").value;
+  const buttons = window.postButtons?.getButtonsPayload() || [];
 
   await api(`/api/posts/${currentPostId}`, {
     method: "PUT",
-    body: JSON.stringify({ title, content }),
+    body: JSON.stringify({ title, content, buttons }),
   });
 
   await loadPosts();

@@ -11,6 +11,7 @@ os.environ.setdefault("ADMIN_USERNAME", "admin")
 os.environ.setdefault("ADMIN_PASSWORD", "test-password")
 os.environ.setdefault("SESSION_SECRET", "test-session-secret-32-characters-long")
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
+os.environ.setdefault("PUBLIC_BASE_URL", "http://testserver")
 
 from app.database import init_db  # noqa: E402
 from app.main import app  # noqa: E402

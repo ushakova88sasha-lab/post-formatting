@@ -21,7 +21,7 @@ def _require_telegram_config() -> tuple[str, str]:
     return token, channel
 
 
-async def send_message(text: str) -> int:
+async def send_message(text: str, reply_markup: dict | None = None) -> int:
     """Отправляет пост в канал через Rich Messages API. Возвращает message_id."""
     markdown = text.strip()
     if not markdown:
@@ -37,12 +37,14 @@ async def send_message(text: str) -> int:
     markdown = prepare_markdown_for_telegram(markdown)
 
     url = f"https://api.telegram.org/bot{token}/sendRichMessage"
-    payload = {
+    payload: dict = {
         "chat_id": channel,
         "rich_message": {
             "markdown": markdown,
         },
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(url, json=payload)

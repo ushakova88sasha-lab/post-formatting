@@ -5,7 +5,8 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.database import Post, PostStatus, SessionLocal
-from app.telegram_client import TelegramError, send_message
+from app.publish import publish_post_to_telegram
+from app.telegram_client import TelegramError
 
 scheduler = AsyncIOScheduler()
 
@@ -20,7 +21,7 @@ async def publish_post_by_id(post_id: int) -> None:
             return
 
         try:
-            message_id = await send_message(post.content)
+            message_id = await publish_post_to_telegram(post, db)
             post.status = PostStatus.PUBLISHED.value
             post.published_at = datetime.utcnow()
             post.telegram_message_id = message_id

@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, String, Text, create_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from app.config import settings
 
@@ -33,6 +33,39 @@ class Post(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+    buttons: Mapped[list["PostButton"]] = relationship(
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="PostButton.position",
+    )
+
+
+class PostButton(Base):
+    __tablename__ = "post_buttons"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), index=True)
+    text: Mapped[str] = mapped_column(String(64), default="")
+    url: Mapped[str] = mapped_column(String(2048), default="")
+    position: Mapped[int] = mapped_column(default=0)
+    click_token: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    post: Mapped["Post"] = relationship(back_populates="buttons")
+    clicks: Mapped[list["ButtonClick"]] = relationship(
+        back_populates="button",
+        cascade="all, delete-orphan",
+    )
+
+
+class ButtonClick(Base):
+    __tablename__ = "button_clicks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    button_id: Mapped[int] = mapped_column(
+        ForeignKey("post_buttons.id", ondelete="CASCADE"), index=True
+    )
+    clicked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    button: Mapped["PostButton"] = relationship(back_populates="clicks")
 
 
 class AppSetting(Base):

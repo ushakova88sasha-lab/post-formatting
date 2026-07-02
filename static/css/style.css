@@ -1038,6 +1038,98 @@ select {
   color: var(--text-muted);
 }
 
+.buttons-section {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.buttons-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.buttons-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.buttons-hint {
+  margin: 0;
+}
+
+.buttons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.buttons-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.button-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.button-row-fields {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(220px, 2fr);
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.button-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.button-click-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.btn-icon {
+  min-width: 2rem;
+  padding: 0.45rem 0.65rem;
+}
+
+.tg-inline-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.tg-inline-button {
+  display: block;
+  text-align: center;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(42, 171, 238, 0.15);
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tg-inline-button:hover {
+  background: rgba(42, 171, 238, 0.25);
+}
+
 .markdown-hint {
   margin-top: 0.75rem;
   font-size: 0.78rem;

@@ -5,6 +5,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import require_user
+from app.buttons import (
+    ButtonValidationError,
+    buttons_for_post,
+    replace_post_buttons,
+)
 from app.config import settings
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
@@ -15,8 +20,9 @@ from app.post_utils import (
     maybe_fix_generic_title,
     title_from_content,
 )
+from app.publish import publish_post_to_telegram
 from app.scheduler import cancel_scheduled_post, publish_post_by_id, schedule_post
-from app.telegram_client import TelegramError, send_message
+from app.telegram_client import TelegramError
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
@@ -24,11 +30,13 @@ router = APIRouter(prefix="/api/posts", tags=["posts"])
 class PostCreate(BaseModel):
     title: str = ""
     content: str = ""
+    buttons: list[dict] = Field(default_factory=list)
 
 
 class PostUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
+    buttons: list[dict] | None = None
 
 
 class ScheduleRequest(BaseModel):
@@ -45,7 +53,7 @@ def _utc_iso(dt: datetime | None) -> str | None:
     return dt.isoformat() + "Z"
 
 
-def post_to_dict(post: Post) -> dict:
+def post_to_dict(post: Post, db: Session) -> dict:
     return {
         "id": post.id,
         "title": post.title,
@@ -58,6 +66,7 @@ def post_to_dict(post: Post) -> dict:
         "error_message": post.error_message,
         "created_at": _utc_iso(post.created_at),
         "updated_at": _utc_iso(post.updated_at),
+        "buttons": buttons_for_post(db, post.id),
     }
 
 
@@ -78,18 +87,24 @@ async def list_posts(db: Session = Depends(get_db), _: str = Depends(require_use
     posts = db.query(Post).order_by(Post.updated_at.desc()).all()
     _sync_generic_titles(posts, db)
     return {
-        "posts": [post_to_dict(p) for p in posts],
+        "posts": [post_to_dict(p, db) for p in posts],
         "retention_days": settings.post_retention_days,
     }
 
 
 @router.post("")
 async def create_post(payload: PostCreate, db: Session = Depends(get_db), _: str = Depends(require_user)):
-    post = Post(title=payload.title, content=payload.content, status=PostStatus.DRAFT.value)
-    db.add(post)
-    db.commit()
-    db.refresh(post)
-    return post_to_dict(post)
+    try:
+        post = Post(title=payload.title, content=payload.content, status=PostStatus.DRAFT.value)
+        db.add(post)
+        db.commit()
+        db.refresh(post)
+        replace_post_buttons(db, post.id, payload.buttons)
+        db.commit()
+        db.refresh(post)
+        return post_to_dict(post, db)
+    except ButtonValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/{post_id}")
@@ -102,7 +117,7 @@ async def get_post(post_id: int, db: Session = Depends(get_db), _: str = Depends
         post.title = derived
         db.commit()
         db.refresh(post)
-    return post_to_dict(post)
+    return post_to_dict(post, db)
 
 
 @router.put("/{post_id}")
@@ -122,10 +137,16 @@ async def update_post(
         post.title = payload.title
     if payload.content is not None:
         post.content = payload.content
-    post.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(post)
-    return post_to_dict(post)
+
+    try:
+        if payload.buttons is not None:
+            replace_post_buttons(db, post.id, payload.buttons)
+        post.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(post)
+        return post_to_dict(post, db)
+    except ButtonValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.delete("/{post_id}")
@@ -161,7 +182,7 @@ async def publish_now(post_id: int, db: Session = Depends(get_db), _: str = Depe
         cancel_scheduled_post(post_id)
 
     try:
-        message_id = await send_message(post.content)
+        message_id = await publish_post_to_telegram(post, db)
         if not post.title or post.title.strip() == DEFAULT_POST_TITLE:
             derived = title_from_content(post.content)
             if derived:
@@ -173,7 +194,7 @@ async def publish_now(post_id: int, db: Session = Depends(get_db), _: str = Depe
         post.error_message = None
         db.commit()
         db.refresh(post)
-        return post_to_dict(post)
+        return post_to_dict(post, db)
     except TelegramError as exc:
         post.status = PostStatus.FAILED.value
         post.error_message = str(exc)
@@ -206,4 +227,4 @@ async def schedule(
 
     schedule_post(post_id, scheduled_at)
     db.refresh(post)
-    return post_to_dict(post)
+    return post_to_dict(post, db)
