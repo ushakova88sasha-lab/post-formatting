@@ -2,11 +2,21 @@
  * Панель выбора эмодзи для редактора постов.
  */
 (function () {
-  const CATEGORIES = window.EMOJI_CATEGORIES || [];
+  const UNICODE_CATEGORIES = window.EMOJI_CATEGORIES || [];
 
   let open = false;
-  let activeCategory = CATEGORIES[0]?.id || "smileys";
+  let activeCategory = UNICODE_CATEGORIES[0]?.id || "smileys";
   let searchQuery = "";
+  let customPacks = [];
+  let categories = [];
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 
   function getPopover() {
     return document.getElementById("emoji-picker-popover");
@@ -20,8 +30,46 @@
     return document.getElementById("emoji-picker-search");
   }
 
+  function packTabLabel(title) {
+    const text = (title || "").trim();
+    if (!text) return "★";
+    if (text.length <= 3) return text;
+    return text.slice(0, 3);
+  }
+
+  function buildCategories() {
+    const customCategories = customPacks.map((pack) => ({
+      id: `custom:${pack.short_name}`,
+      label: packTabLabel(pack.title),
+      title: pack.title || pack.short_name,
+      custom: true,
+      emojis: (pack.emojis || []).map((emoji) => ({
+        custom: true,
+        id: emoji.id,
+        alt: emoji.alt || "✨",
+        preview_url: emoji.preview_url,
+        insert: `![](tg://emoji?id=${emoji.id})`,
+      })),
+    }));
+
+    categories = [...UNICODE_CATEGORIES, ...customCategories];
+    if (!categories.some((category) => category.id === activeCategory)) {
+      activeCategory = categories[0]?.id || "smileys";
+    }
+  }
+
   function emojiChar(item) {
+    if (item?.custom) {
+      return item.alt || "✨";
+    }
     return typeof item === "string" ? item : item.e;
+  }
+
+  function emojiInsertText(item) {
+    if (item?.custom) {
+      return item.insert || `![](tg://emoji?id=${item.id})`;
+    }
+    return emojiChar(item);
   }
 
   function insertIntoEditor(text) {
@@ -61,20 +109,50 @@
     const results = [];
     const seen = new Set();
 
-    for (const cat of CATEGORIES) {
+    for (const cat of categories) {
       for (const item of cat.emojis) {
+        if (item?.custom) {
+          const key = `custom:${item.id}`;
+          if (seen.has(key)) continue;
+
+          const alt = (item.alt || "").toLowerCase();
+          const title = (cat.title || "").toLowerCase();
+          if (alt.includes(q) || title.includes(q) || String(item.id).includes(q)) {
+            seen.add(key);
+            results.push(item);
+          }
+          continue;
+        }
+
         const char = emojiChar(item);
         if (seen.has(char)) continue;
 
         const keywords = typeof item === "string" ? "" : item.q || "";
         if (char.includes(q) || keywords.includes(q)) {
           seen.add(char);
-          results.push(char);
+          results.push(item);
         }
       }
     }
 
     return results;
+  }
+
+  function renderEmojiButton(item) {
+    if (item?.custom) {
+      const alt = escapeHtml(item.alt || "✨");
+      const preview = item.preview_url
+        ? `<img src="${escapeHtml(item.preview_url)}" alt="${alt}" class="emoji-picker-preview" loading="lazy">`
+        : alt;
+      return `<button type="button" class="emoji-picker-item emoji-picker-item-custom" data-insert="${escapeHtml(
+        emojiInsertText(item)
+      )}" title="${alt}">${preview}</button>`;
+    }
+
+    const emoji = emojiChar(item);
+    return `<button type="button" class="emoji-picker-item" data-emoji="${escapeHtml(
+      emoji
+    )}" title="${escapeHtml(emoji)}">${emoji}</button>`;
   }
 
   function renderEmojiGrid(emojis) {
@@ -86,18 +164,13 @@
       return;
     }
 
-    grid.innerHTML = emojis
-      .map(
-        (emoji) =>
-          `<button type="button" class="emoji-picker-item" data-emoji="${emoji}" title="${emoji}">${emoji}</button>`
-      )
-      .join("");
+    grid.innerHTML = emojis.map((emoji) => renderEmojiButton(emoji)).join("");
 
     grid.querySelectorAll(".emoji-picker-item").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        insertIntoEditor(btn.dataset.emoji || btn.textContent);
+        insertIntoEditor(btn.dataset.insert || btn.dataset.emoji || btn.textContent);
       });
     });
   }
@@ -108,11 +181,11 @@
       return;
     }
 
-    const category = CATEGORIES.find((c) => c.id === categoryId) || CATEGORIES[0];
+    const category = categories.find((c) => c.id === categoryId) || categories[0];
     if (!category) return;
 
     activeCategory = category.id;
-    renderEmojiGrid(category.emojis.map(emojiChar));
+    renderEmojiGrid(category.emojis);
   }
 
   function renderTabs() {
@@ -121,10 +194,20 @@
 
     const showSearchActive = Boolean(searchQuery.trim());
 
-    tabs.innerHTML = CATEGORIES.map(
-      (cat) =>
-        `<button type="button" class="emoji-picker-tab ${!showSearchActive && cat.id === activeCategory ? "active" : ""}" data-category="${cat.id}" title="${cat.title}">${cat.label}</button>`
-    ).join("");
+    tabs.innerHTML = categories
+      .map((cat) => {
+        const tabClass = [
+          "emoji-picker-tab",
+          cat.custom ? "emoji-picker-tab-custom" : "",
+          !showSearchActive && cat.id === activeCategory ? "active" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        return `<button type="button" class="${tabClass}" data-category="${escapeHtml(
+          cat.id
+        )}" title="${escapeHtml(cat.title || cat.label)}">${escapeHtml(cat.label)}</button>`;
+      })
+      .join("");
 
     tabs.querySelectorAll(".emoji-picker-tab").forEach((tab) => {
       tab.addEventListener("click", (e) => {
@@ -182,7 +265,7 @@
   function show() {
     const popover = getPopover();
     const btn = getButton();
-    if (!popover || !btn || btn.disabled || !CATEGORIES.length) return;
+    if (!popover || !btn || btn.disabled || !categories.length) return;
 
     searchQuery = "";
     const input = getSearchInput();
@@ -219,10 +302,29 @@
     }
   }
 
+  async function loadCustomPacks() {
+    if (!window.authClient?.fetch) {
+      buildCategories();
+      return;
+    }
+
+    try {
+      const data = await window.authClient.fetch("/api/emoji/packs", {}, { redirectOn401: false });
+      customPacks = Array.isArray(data?.packs) ? data.packs : [];
+    } catch {
+      customPacks = [];
+    }
+
+    buildCategories();
+  }
+
   function init() {
     const btn = getButton();
     const popover = getPopover();
     if (!btn || !popover) return;
+
+    buildCategories();
+    loadCustomPacks();
 
     document.body.appendChild(popover);
 
@@ -272,7 +374,18 @@
       true
     );
 
-    window.emojiPicker = { close, insert: insertIntoEditor };
+    window.emojiPicker = {
+      close,
+      insert: insertIntoEditor,
+      reload: async () => {
+        await loadCustomPacks();
+        if (open) {
+          renderTabs();
+          renderGrid(activeCategory);
+          positionPopover();
+        }
+      },
+    };
   }
 
   if (document.readyState === "loading") {

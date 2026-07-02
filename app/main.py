@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import init_db, SessionLocal
 from app.post_retention import purge_expired_posts_session
-from app.routers import auth, clicks, posts, settings as settings_router, uploads
+from app.routers import auth, clicks, emoji, posts, settings as settings_router, uploads
 from app.scheduler import start_scheduler, stop_scheduler
 from app.settings_store import get_channel_id
 from app.stats_backfill import backfill_published_posts
@@ -42,6 +42,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(emoji.router)
 app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(clicks.router)

@@ -180,6 +180,7 @@ function showView(view) {
     document.getElementById("editor-view").classList.add("hidden");
     document.getElementById("empty-view").classList.add("hidden");
     loadTelegramSettings();
+    loadEmojiPacks();
     window.postStats?.loadMonthlyStats(api);
     window.postStats?.loadTrackingSettings(api);
     return;
@@ -271,6 +272,109 @@ async function verifyTelegramSettings() {
     showAlert("Подключение успешно", "success");
   } catch (err) {
     showAlert(err.message);
+  }
+}
+
+function renderEmojiPacksList(packs) {
+  const el = document.getElementById("emoji-packs-list");
+  if (!el) return;
+
+  if (!packs.length) {
+    el.innerHTML = '<p class="field-hint">Наборы не импортированы. Добавьте ссылку выше.</p>';
+    return;
+  }
+
+  el.innerHTML = packs
+    .map(
+      (pack) => `
+        <article class="emoji-pack-card" data-pack="${escapeHtml(pack.short_name)}">
+          <div class="emoji-pack-card-info">
+            <p class="emoji-pack-card-title">${escapeHtml(pack.title || pack.short_name)}</p>
+            <p class="emoji-pack-card-meta">
+              ${pack.emoji_count || (pack.emojis || []).length} эмодзи ·
+              <a href="${escapeHtml(pack.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(pack.short_name)}</a>
+            </p>
+          </div>
+          <div class="emoji-pack-card-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-action="refresh-emoji-pack">Обновить</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="delete-emoji-pack">Удалить</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+async function loadEmojiPacks() {
+  const el = document.getElementById("emoji-packs-list");
+  if (!el) return;
+
+  try {
+    const data = await api("/api/emoji/packs");
+    if (!data) return;
+
+    const packs = Array.isArray(data.packs) ? data.packs : [];
+    renderEmojiPacksList(packs);
+    await window.emojiPicker?.reload?.();
+  } catch (err) {
+    el.innerHTML = `<p class="field-hint">${escapeHtml(err.message || "Не удалось загрузить наборы")}</p>`;
+  }
+}
+
+async function importEmojiPack(event) {
+  event.preventDefault();
+
+  const urlInput = document.getElementById("emoji-pack-url");
+  const url = urlInput?.value?.trim();
+  if (!url) {
+    showAlert("Укажите ссылку на набор эмодзи");
+    return;
+  }
+
+  try {
+    const pack = await api("/api/emoji/packs/import", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    });
+    if (!pack) return;
+
+    showAlert(`Набор «${pack.title || pack.short_name}» импортирован`, "success");
+    if (urlInput) {
+      urlInput.value = "";
+    }
+    await loadEmojiPacks();
+  } catch (err) {
+    showAlert(err.message || "Не удалось импортировать набор");
+  }
+}
+
+async function refreshEmojiPack(shortName) {
+  try {
+    const pack = await api(`/api/emoji/packs/${encodeURIComponent(shortName)}/refresh`, {
+      method: "POST",
+    });
+    if (!pack) return;
+
+    showAlert(`Набор «${pack.title || pack.short_name}» обновлён`, "success");
+    await loadEmojiPacks();
+  } catch (err) {
+    showAlert(err.message || "Не удалось обновить набор");
+  }
+}
+
+async function deleteEmojiPack(shortName) {
+  if (!window.confirm(`Удалить набор «${shortName}» из админки?`)) {
+    return;
+  }
+
+  try {
+    await api(`/api/emoji/packs/${encodeURIComponent(shortName)}`, {
+      method: "DELETE",
+    });
+    showAlert("Набор удалён", "success");
+    await loadEmojiPacks();
+  } catch (err) {
+    showAlert(err.message || "Не удалось удалить набор");
   }
 }
 
@@ -669,6 +773,21 @@ document.getElementById("post-list").addEventListener("click", (event) => {
 
 document.getElementById("settings-form").addEventListener("submit", saveTelegramSettings);
 document.getElementById("verify-telegram-btn").addEventListener("click", verifyTelegramSettings);
+document.getElementById("emoji-pack-form")?.addEventListener("submit", (event) => {
+  importEmojiPack(event).catch((err) => showAlert(err.message || "Не удалось импортировать набор"));
+});
+document.getElementById("emoji-packs-list")?.addEventListener("click", (event) => {
+  const card = event.target.closest(".emoji-pack-card");
+  if (!card?.dataset?.pack) return;
+
+  const action = event.target.closest("[data-action]")?.dataset?.action;
+  if (action === "refresh-emoji-pack") {
+    refreshEmojiPack(card.dataset.pack).catch((err) => showAlert(err.message || "Не удалось обновить набор"));
+  }
+  if (action === "delete-emoji-pack") {
+    deleteEmojiPack(card.dataset.pack).catch((err) => showAlert(err.message || "Не удалось удалить набор"));
+  }
+});
 document.getElementById("tracking-form")?.addEventListener("submit", (event) => {
   window.postStats
     ?.saveTrackingSettings(api, event)

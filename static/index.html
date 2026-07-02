@@ -75,6 +75,32 @@
         </section>
 
         <section class="settings-section">
+          <h2 class="settings-title">Премиум-эмодзи</h2>
+          <p class="settings-desc">
+            Импортируйте набор из Telegram — эмодзи появятся в панели редактора с превью.
+            Нужен настроенный токен бота.
+          </p>
+          <form id="emoji-pack-form" class="settings-form">
+            <div class="form-group">
+              <label for="emoji-pack-url">Ссылка на набор</label>
+              <input
+                type="url"
+                id="emoji-pack-url"
+                class="input"
+                placeholder="https://t.me/addemoji/MPSTATS_posts"
+              >
+              <p class="field-hint">Формат: <code>t.me/addemoji/имя_набора</code></p>
+            </div>
+            <div class="settings-actions">
+              <button type="submit" class="btn btn-primary" id="import-emoji-pack-btn">Импортировать набор</button>
+            </div>
+          </form>
+          <div id="emoji-packs-list" class="emoji-packs-list">
+            <p class="field-hint">Загрузка наборов…</p>
+          </div>
+        </section>
+
+        <section class="settings-section">
           <h2 class="settings-title">Внешний трекер</h2>
           <p class="settings-desc">UTM-метки добавляются к ссылкам при редиректе (/go/...). Подходит для Метрики, GA и short links.</p>
           <form id="tracking-form" class="settings-form">
@@ -310,7 +336,7 @@
   <script src="/static/js/editor-history.js?v=5"></script>
   <script src="/static/js/editor-toolbar.js?v=19"></script>
   <script src="/static/js/emoji-data.js?v=1"></script>
-  <script src="/static/js/emoji-picker.js?v=6"></script>
+  <script src="/static/js/emoji-picker.js?v=7"></script>
   <script src="/static/js/post-buttons.js?v=3"></script>
   <script src="/static/js/post-stats.js?v=3"></script>
   <script src="/static/js/app.js?v=18"></script>

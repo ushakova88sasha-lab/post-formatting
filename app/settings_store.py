@@ -11,6 +11,7 @@ KEY_TRACKING_ENABLED = "tracking_enabled"
 KEY_TRACKING_UTM_SOURCE = "tracking_utm_source"
 KEY_TRACKING_UTM_MEDIUM = "tracking_utm_medium"
 KEY_TRACKING_UTM_CAMPAIGN = "tracking_utm_campaign"
+KEY_CUSTOM_EMOJI_PACKS = "custom_emoji_packs"
 
 
 def _get(db: Session, key: str) -> str | None:
@@ -95,6 +96,24 @@ def get_tracking_settings(db: Session | None = None) -> dict:
     finally:
         if db is None:
             session.close()
+
+
+def get_custom_emoji_packs(db: Session | None = None) -> list[dict]:
+    from app.custom_emoji import load_packs
+
+    session = db if db is not None else SessionLocal()
+    try:
+        return load_packs(_get(session, KEY_CUSTOM_EMOJI_PACKS))
+    finally:
+        if db is None:
+            session.close()
+
+
+def save_custom_emoji_packs(db: Session, packs: list[dict]) -> list[dict]:
+    from app.custom_emoji import dump_packs
+
+    _set(db, KEY_CUSTOM_EMOJI_PACKS, dump_packs(packs))
+    return packs
 
 
 def save_tracking_settings(

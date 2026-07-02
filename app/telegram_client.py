@@ -57,6 +57,57 @@ async def send_message(text: str, reply_markup: dict | None = None) -> int:
     return data["result"]["message_id"]
 
 
+async def get_sticker_set(name: str) -> dict:
+    """Загружает набор стикеров/эмодзи по short name (например MPSTATS_posts)."""
+    token = get_bot_token()
+    if not token:
+        raise TelegramError("Укажите токен бота в Настройках")
+
+    url = f"https://api.telegram.org/bot{token}/getStickerSet"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, params={"name": name})
+        data = response.json()
+
+    if not data.get("ok"):
+        description = data.get("description", "Не удалось загрузить набор эмодзи")
+        raise TelegramError(description, response.status_code)
+
+    return data["result"]
+
+
+async def get_telegram_file_path(file_id: str) -> str:
+    token = get_bot_token()
+    if not token:
+        raise TelegramError("Укажите токен бота в Настройках")
+
+    url = f"https://api.telegram.org/bot{token}/getFile"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, params={"file_id": file_id})
+        data = response.json()
+
+    if not data.get("ok"):
+        description = data.get("description", "Не удалось получить файл превью")
+        raise TelegramError(description, response.status_code)
+
+    file_path = data.get("result", {}).get("file_path")
+    if not file_path:
+        raise TelegramError("Telegram не вернул путь к файлу превью")
+
+    return file_path
+
+
+async def download_telegram_file(file_path: str) -> bytes:
+    token = get_bot_token()
+    if not token:
+        raise TelegramError("Укажите токен бота в Настройках")
+
+    url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        return response.content
+
+
 async def verify_bot() -> dict:
     """Проверяет токен бота."""
     token = get_bot_token()
