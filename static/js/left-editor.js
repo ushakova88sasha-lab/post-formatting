@@ -50,12 +50,16 @@
     return window.previewEditor?.messageToMarkdown?.(messageEl) ?? "";
   }
 
-  function syncToTextarea() {
+  function syncToTextarea({ force = false } = {}) {
     const messageEl = getMessage();
     const textarea = getTextarea();
     if (!messageEl || !textarea || textarea.readOnly) return;
 
     const markdown = serialize(messageEl);
+    if (!force && !dirty && !markdown.trim() && textarea.value.trim()) {
+      return;
+    }
+
     if (textarea.value === markdown) {
       dirty = false;
       return;
@@ -146,7 +150,9 @@
     messageEl.addEventListener("blur", () => {
       focused = false;
       saveSelection();
-      syncToTextarea();
+      if (dirty) {
+        syncToTextarea({ force: true });
+      }
       dirty = false;
       window.dispatchEvent(new CustomEvent("left-editor:blur"));
     });
@@ -201,22 +207,29 @@
 
     const token = ++refreshToken;
     const content = textarea.value;
+
+    if (!content.trim()) {
+      setVisualHtml('<div class="tg-message tg-rich"><p class="empty">Начните вводить текст…</p></div>');
+      dirty = false;
+      return;
+    }
+
     try {
-      const res = await window.authClient.fetch(
+      const data = await window.authClient.fetch(
         "/api/posts/preview",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content }),
         },
         { redirectOn401: true }
       );
-      if (!res) return;
-      const data = await res.json();
       if (token !== refreshToken) return;
-      setVisualHtml(
-        data.html || '<div class="tg-message tg-rich"><p class="empty">Начните вводить текст…</p></div>'
-      );
+      if (!data?.html) {
+        setVisualHtml('<div class="tg-message tg-rich"><p class="empty">Ошибка превью</p></div>');
+        return;
+      }
+      setVisualHtml(data.html);
+      dirty = false;
     } catch {
       if (token !== refreshToken) return;
       setVisualHtml('<div class="tg-message tg-rich"><p class="empty">Ошибка превью</p></div>');
@@ -337,8 +350,10 @@
     const normalized = nextMode === "visual" ? "visual" : "markdown";
     if (!force && normalized === mode) return;
 
-    if (mode === "visual") {
-      syncToTextarea();
+    if (mode === "visual" && normalized === "markdown") {
+      if (dirty) {
+        syncToTextarea({ force: true });
+      }
     }
 
     mode = normalized;
