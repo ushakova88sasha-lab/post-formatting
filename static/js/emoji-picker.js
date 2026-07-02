@@ -121,7 +121,8 @@
   function resolveInsertText(btn) {
     const customId = btn.dataset.customId;
     if (customId) {
-      return `![](tg://emoji?id=${customId})`;
+      const alt = btn.dataset.customAlt || "✨";
+      return `![${alt}](tg://emoji?id=${customId})`;
     }
     return btn.dataset.emoji || btn.textContent || "";
   }
@@ -175,7 +176,7 @@
         : alt;
       return `<button type="button" class="emoji-picker-item emoji-picker-item-custom" data-custom-id="${escapeHtml(
         item.id
-      )}" title="${alt}">${preview}</button>`;
+      )}" data-custom-alt="${escapeHtml(item.alt || "✨")}" title="${alt}">${preview}</button>`;
     }
 
     const emoji = emojiChar(item);

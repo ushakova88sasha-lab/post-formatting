@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
 from app.markdown_telegram import prepare_markdown_for_telegram
+from app.telegram_client import prepare_custom_emojis_for_telegram
 from app.post_retention import purge_expired_posts
 from app.post_utils import (
     DEFAULT_POST_TITLE,
@@ -219,7 +220,8 @@ async def preview(payload: PreviewRequest, _: str = Depends(require_user)):
 
 @router.post("/export/telegram-markdown")
 async def export_telegram_markdown(payload: PreviewRequest, _: str = Depends(require_user)):
-    return {"markdown": prepare_markdown_for_telegram(payload.content)}
+    markdown = await prepare_custom_emojis_for_telegram(payload.content)
+    return {"markdown": prepare_markdown_for_telegram(markdown)}
 
 
 @router.post("/{post_id}/publish")

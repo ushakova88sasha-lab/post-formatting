@@ -3,9 +3,13 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.custom_emoji import (
+    build_emoji_alt_map,
+    custom_emojis_to_telegram_html,
+    custom_emoji_markdown,
     dump_packs,
     find_emoji_preview_file_id,
     load_packs,
+    normalize_custom_emoji_markdown,
     packs_for_client,
     parse_pack_url,
     sticker_set_to_pack,
@@ -144,3 +148,34 @@ def test_delete_emoji_pack(client, auth_cookies, monkeypatch):
 
     list_response = client.get("/api/emoji/packs", cookies=auth_cookies)
     assert list_response.json()["packs"] == []
+
+
+def test_normalize_custom_emoji_markdown_adds_alt_from_pack():
+    pack = sticker_set_to_pack(SAMPLE_STICKER_SET, "https://t.me/addemoji/MPSTATS_posts")
+    alt_map = build_emoji_alt_map([pack])
+    source = "Привет ![](tg://emoji?id=5368324170671202286)"
+    normalized = normalize_custom_emoji_markdown(source, alt_map)
+    assert normalized == "Привет ![📊](tg://emoji?id=5368324170671202286)"
+
+
+def test_custom_emojis_to_telegram_html():
+    pack = sticker_set_to_pack(SAMPLE_STICKER_SET, "https://t.me/addemoji/MPSTATS_posts")
+    alt_map = build_emoji_alt_map([pack])
+    source = custom_emoji_markdown("5368324170671202286", "📊")
+    html = custom_emojis_to_telegram_html(source, alt_map)
+    assert html == '<tg-emoji emoji-id="5368324170671202286">📊</tg-emoji>'
+
+
+def test_prepare_custom_emojis_for_telegram_uses_html_tag(monkeypatch):
+    pack = sticker_set_to_pack(SAMPLE_STICKER_SET, "https://t.me/addemoji/MPSTATS_posts")
+    monkeypatch.setattr("app.settings_store.get_custom_emoji_packs", lambda db=None: [pack])
+
+    import asyncio
+
+    from app.telegram_client import prepare_custom_emojis_for_telegram
+
+    prepared = asyncio.run(
+        prepare_custom_emojis_for_telegram("Текст ![](tg://emoji?id=5368324170671202286) конец")
+    )
+    assert '<tg-emoji emoji-id="5368324170671202286">📊</tg-emoji>' in prepared
+    assert "tg://emoji" not in prepared

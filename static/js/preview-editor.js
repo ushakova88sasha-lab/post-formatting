@@ -96,6 +96,10 @@
         return inner();
       case "img": {
         const src = el.getAttribute("src") || "";
+        const alt = el.getAttribute("alt") || "";
+        if (src.startsWith("tg://emoji?id=")) {
+          return `![${alt}](${src})`;
+        }
         return `![](${src})`;
       }
       default:

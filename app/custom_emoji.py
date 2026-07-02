@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from datetime import UTC, datetime
@@ -10,6 +11,10 @@ from typing import Any
 PACK_URL_RE = re.compile(
     r"(?:https?://)?(?:t\.me|telegram\.me)/(?:addemoji|addstickers)/(?P<name>[A-Za-z0-9_]+)",
     re.IGNORECASE,
+)
+
+CUSTOM_EMOJI_MD_RE = re.compile(
+    r"!\[([^\]]*)\]\(tg://emoji\?id=(\d+)\)",
 )
 
 
@@ -127,3 +132,39 @@ def packs_for_client(packs: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return client_packs
+
+
+def build_emoji_alt_map(packs: list[dict[str, Any]]) -> dict[str, str]:
+    alt_map: dict[str, str] = {}
+    for pack in packs:
+        for emoji in pack.get("emojis") or []:
+            emoji_id = str(emoji.get("id") or "")
+            if emoji_id:
+                alt_map[emoji_id] = emoji.get("alt") or "✨"
+    return alt_map
+
+
+def custom_emoji_markdown(emoji_id: str, alt: str = "✨") -> str:
+    return f"![{alt}](tg://emoji?id={emoji_id})"
+
+
+def normalize_custom_emoji_markdown(markdown: str, alt_map: dict[str, str]) -> str:
+    """Добавляет fallback-эмодзи в markdown, если alt пустой."""
+
+    def repl(match: re.Match[str]) -> str:
+        alt = match.group(1).strip() or alt_map.get(match.group(2), "✨")
+        return custom_emoji_markdown(match.group(2), alt)
+
+    return CUSTOM_EMOJI_MD_RE.sub(repl, markdown)
+
+
+def custom_emojis_to_telegram_html(markdown: str, alt_map: dict[str, str]) -> str:
+    """Преобразует markdown кастомных эмодзи в <tg-emoji> для sendRichMessage."""
+
+    def repl(match: re.Match[str]) -> str:
+        emoji_id = match.group(2)
+        alt = match.group(1).strip() or alt_map.get(emoji_id, "✨")
+        safe_alt = html.escape(alt, quote=False)
+        return f'<tg-emoji emoji-id="{emoji_id}">{safe_alt}</tg-emoji>'
+
+    return CUSTOM_EMOJI_MD_RE.sub(repl, markdown)
