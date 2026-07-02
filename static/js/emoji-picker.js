@@ -73,6 +73,8 @@
   }
 
   function insertIntoEditor(text) {
+    if (!text) return;
+
     if (window.leftEditor?.insertText?.(text)) {
       return;
     }
@@ -84,22 +86,49 @@
     const textarea = document.getElementById("post-content");
     if (!textarea || textarea.readOnly) return;
 
-    if (window.leftEditor?.isVisualMode?.()) {
-      window.leftEditor.syncToTextarea?.();
+    const isVisual = window.leftEditor?.isVisualMode?.();
+
+    window.editorHistory?.beforeChange?.();
+
+    let start = textarea.selectionStart ?? textarea.value.length;
+    let end = textarea.selectionEnd ?? start;
+
+    if (isVisual && document.activeElement !== textarea) {
+      const markdown = window.leftEditor?.getMarkdown?.() ?? textarea.value;
+      start = markdown.length;
+      end = start;
+    } else if (isVisual) {
+      window.leftEditor?.syncToTextarea?.({ force: true });
+      start = textarea.selectionStart ?? textarea.value.length;
+      end = textarea.selectionEnd ?? start;
     } else {
       window.previewEditor?.syncToTextarea?.();
     }
 
-    window.editorHistory?.beforeChange?.();
-    const start = textarea.selectionStart ?? textarea.value.length;
-    const end = textarea.selectionEnd ?? start;
     textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
     const pos = start + text.length;
     textarea.setSelectionRange(pos, pos);
     textarea.focus();
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     window.editorHistory?.afterChange?.();
-    window.refreshPreview?.();
+
+    if (isVisual) {
+      void window.leftEditor?.refreshFromMarkdown?.();
+    }
+    window.refreshPreview?.(true);
+  }
+
+  function resolveInsertText(btn) {
+    const customId = btn.dataset.customId;
+    if (customId) {
+      return `![](tg://emoji?id=${customId})`;
+    }
+    return btn.dataset.emoji || btn.textContent || "";
+  }
+
+  function saveEditorSelection() {
+    window.leftEditor?.saveSelection?.();
+    window.previewEditor?.savePreviewSelection?.();
   }
 
   function collectSearchResults(query) {
@@ -144,8 +173,8 @@
       const preview = item.preview_url
         ? `<img src="${escapeHtml(item.preview_url)}" alt="${alt}" class="emoji-picker-preview" loading="lazy">`
         : alt;
-      return `<button type="button" class="emoji-picker-item emoji-picker-item-custom" data-insert="${escapeHtml(
-        emojiInsertText(item)
+      return `<button type="button" class="emoji-picker-item emoji-picker-item-custom" data-custom-id="${escapeHtml(
+        item.id
       )}" title="${alt}">${preview}</button>`;
     }
 
@@ -167,10 +196,14 @@
     grid.innerHTML = emojis.map((emoji) => renderEmojiButton(emoji)).join("");
 
     grid.querySelectorAll(".emoji-picker-item").forEach((btn) => {
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        saveEditorSelection();
+      });
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        insertIntoEditor(btn.dataset.insert || btn.dataset.emoji || btn.textContent);
+        insertIntoEditor(resolveInsertText(btn));
       });
     });
   }
@@ -328,10 +361,21 @@
 
     document.body.appendChild(popover);
 
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      saveEditorSelection();
+    });
+
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       toggle();
+    });
+
+    popover.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".emoji-picker-search")) return;
+      e.preventDefault();
+      saveEditorSelection();
     });
 
     const searchInput = getSearchInput();

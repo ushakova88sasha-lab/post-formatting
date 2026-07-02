@@ -519,6 +519,25 @@
     return wraps[action] ? wraps[action]() : false;
   }
 
+  function insertAtEnd(messageEl, text) {
+    messageEl.focus();
+    dismissPlaceholder(messageEl);
+
+    const sel = window.getSelection();
+    if (!sel) return false;
+
+    const range = document.createRange();
+    range.selectNodeContents(messageEl);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand("insertText", false, text);
+    if (sel.rangeCount) {
+      savedRange = sel.getRangeAt(0).cloneRange();
+    }
+    return true;
+  }
+
   function insertText(text) {
     if (!isVisualMode() || !editable || !text) return false;
 
@@ -534,18 +553,22 @@
       dismissPlaceholder(messageEl);
       const sel = window.getSelection();
       if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(savedRange);
-        document.execCommand("insertText", false, text);
-        if (sel.rangeCount) {
-          savedRange = sel.getRangeAt(0).cloneRange();
+        try {
+          sel.removeAllRanges();
+          sel.addRange(savedRange);
+          document.execCommand("insertText", false, text);
+          if (sel.rangeCount) {
+            savedRange = sel.getRangeAt(0).cloneRange();
+          }
+          dirty = true;
+          syncToTextarea({ silent: true });
+          window.editorHistory?.afterChange?.();
+          window.refreshPreview?.(true);
+          return true;
+        } catch {
+          savedRange = null;
         }
       }
-      dirty = true;
-      syncToTextarea({ silent: true });
-      window.editorHistory?.afterChange?.();
-      window.refreshPreview?.(true);
-      return true;
     }
 
     if (focused || messageEl === document.activeElement) {
@@ -553,6 +576,14 @@
       dismissPlaceholder(messageEl);
       document.execCommand("insertText", false, text);
       saveSelection();
+      dirty = true;
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
+      window.refreshPreview?.(true);
+      return true;
+    }
+
+    if (insertAtEnd(messageEl, text)) {
       dirty = true;
       syncToTextarea({ silent: true });
       window.editorHistory?.afterChange?.();

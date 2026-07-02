@@ -579,6 +579,25 @@
     }
   }
 
+  function insertAtEnd(messageEl, text) {
+    messageEl.focus();
+    dismissPlaceholder(messageEl);
+
+    const sel = window.getSelection();
+    if (!sel) return false;
+
+    const range = document.createRange();
+    range.selectNodeContents(messageEl);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand("insertText", false, text);
+    if (sel.rangeCount) {
+      savedPreviewRange = sel.getRangeAt(0).cloneRange();
+    }
+    return true;
+  }
+
   function insertText(text) {
     const messageEl = getMessage();
     const textarea = getTextarea();
@@ -598,18 +617,22 @@
 
       const sel = window.getSelection();
       if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(savedPreviewRange);
-        document.execCommand("insertText", false, text);
-        if (sel.rangeCount) {
-          savedPreviewRange = sel.getRangeAt(0).cloneRange();
+        try {
+          sel.removeAllRanges();
+          sel.addRange(savedPreviewRange);
+          document.execCommand("insertText", false, text);
+          if (sel.rangeCount) {
+            savedPreviewRange = sel.getRangeAt(0).cloneRange();
+          }
+
+          dirty = true;
+          syncToTextarea({ silent: true });
+          window.editorHistory?.afterChange?.();
+          return true;
+        } catch {
+          savedPreviewRange = null;
         }
       }
-
-      dirty = true;
-      syncToTextarea({ silent: true });
-      window.editorHistory?.afterChange?.();
-      return true;
     }
 
     if (focused || messageEl === document.activeElement) {
@@ -617,6 +640,13 @@
       dismissPlaceholder(messageEl);
       document.execCommand("insertText", false, text);
       savePreviewSelection();
+      dirty = true;
+      syncToTextarea({ silent: true });
+      window.editorHistory?.afterChange?.();
+      return true;
+    }
+
+    if (insertAtEnd(messageEl, text)) {
       dirty = true;
       syncToTextarea({ silent: true });
       window.editorHistory?.afterChange?.();
