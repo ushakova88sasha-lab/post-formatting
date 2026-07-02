@@ -18,8 +18,7 @@
     if (!window.leftEditor?.isVisualMode?.()) {
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
-      window.leftEditor.syncToTextarea?.({ force: true, silent: true });
-      window.leftEditor.refreshFromMarkdown?.();
+      void window.leftEditor.refreshFromMarkdown?.();
     }
     window.refreshPreview?.();
   }
@@ -619,11 +618,11 @@
 
     e.preventDefault();
     if (action === "undo") {
-      window.editorHistory?.undo();
+      void window.editorHistory?.undo();
       return;
     }
     if (action === "redo") {
-      window.editorHistory?.redo();
+      void window.editorHistory?.redo();
       return;
     }
     if (action === "clear-format") {

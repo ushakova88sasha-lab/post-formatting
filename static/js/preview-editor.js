@@ -439,8 +439,10 @@
       focused = false;
       savePreviewSelection();
       if (dirty) {
-        syncToTextarea({ silent: true, trackHistory: true });
+        syncToTextarea({ silent: true });
+        window.editorHistory?.onTyping?.();
       }
+      window.editorHistory?.flushTyping?.();
       dirty = false;
       updateEmptyState(messageEl);
       window.dispatchEvent(new CustomEvent("preview-editor:blur"));
@@ -455,7 +457,8 @@
       updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
-        syncToTextarea({ silent: true, trackHistory: true });
+        syncToTextarea({ silent: true });
+        window.editorHistory?.onTyping?.();
         window.refreshPreview?.();
       }, 200);
     });
@@ -477,7 +480,14 @@
     applyEditableState(messageEl);
   }
 
-  function syncToTextarea({ silent = false, trackHistory = false } = {}) {
+  function getMarkdown() {
+    const messageEl = getMessage();
+    if (!messageEl) return "";
+    const markdown = messageToMarkdown(messageEl);
+    return markdown.trim() === EMPTY_TEXT ? "" : markdown;
+  }
+
+  function syncToTextarea({ silent = false } = {}) {
     const messageEl = getMessage();
     const textarea = getTextarea();
     if (!messageEl || !textarea || textarea.readOnly) {
@@ -495,9 +505,6 @@
     dirty = false;
     if (!silent) {
       textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
-    }
-    if (trackHistory) {
-      window.editorHistory?.onTyping?.();
     }
   }
 
@@ -639,6 +646,7 @@
       setEditable,
       insertText,
       messageToMarkdown,
+      getMarkdown,
       hasSelection,
       savePreviewSelection,
       applyCommand,

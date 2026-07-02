@@ -18,35 +18,40 @@
     return document.getElementById(TEXTAREA_ID);
   }
 
-  function syncVisualFromTextarea() {
-    if (window.leftEditor?.isVisualMode?.()) {
-      window.leftEditor.refreshFromMarkdown?.();
-    }
-    window.refreshPreview?.(true);
-  }
-
   function readContent() {
     const textarea = getTextarea();
     if (!textarea) return "";
 
     if (window.leftEditor?.isVisualMode?.()) {
-      window.leftEditor.syncToTextarea?.({ force: true, silent: true });
-    } else if (window.previewEditor?.isEditing?.()) {
-      window.previewEditor.syncToTextarea?.({ silent: true });
+      const markdown = window.leftEditor.getMarkdown?.() ?? "";
+      textarea.value = markdown;
+      return markdown;
+    }
+
+    if (window.previewEditor?.isEditing?.()) {
+      const markdown = window.previewEditor.getMarkdown?.() ?? "";
+      textarea.value = markdown;
+      return markdown;
     }
 
     return textarea.value;
   }
 
-  function writeContent(value) {
+  async function writeContent(value) {
     const textarea = getTextarea();
     if (!textarea) return;
 
     applying = true;
     textarea.value = value;
-    syncVisualFromTextarea();
+
+    if (window.leftEditor?.isVisualMode?.()) {
+      await window.leftEditor.refreshFromMarkdown?.();
+    }
+
+    await window.refreshPreview?.(true);
+
     applying = false;
-    baseline = value;
+    baseline = readContent();
     editSessionActive = false;
     clearTimeout(debounceTimer);
     debounceTimer = null;
@@ -115,23 +120,24 @@
     updateButtons();
   }
 
+  function flushTyping() {
+    flushPendingSession();
+    updateButtons();
+  }
+
   function onTextareaInput() {
     if (window.leftEditor?.isVisualMode?.()) return;
     if (window.previewEditor?.isEditing?.()) return;
     onTyping();
   }
 
-  function undo() {
+  async function undo() {
     if (!enabled || !undoStack.length) return false;
 
-    applying = true;
     flushPendingSession();
 
     const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) {
-      applying = false;
-      return false;
-    }
+    if (!textarea || textarea.readOnly) return false;
 
     const current = readContent();
     redoStack.push(current);
@@ -140,30 +146,24 @@
     }
 
     const previous = undoStack.pop();
-    writeContent(previous);
-    applying = false;
+    await writeContent(previous);
     updateButtons();
     return true;
   }
 
-  function redo() {
+  async function redo() {
     if (!enabled || !redoStack.length) return false;
 
-    applying = true;
     flushPendingSession();
 
     const textarea = getTextarea();
-    if (!textarea || textarea.readOnly) {
-      applying = false;
-      return false;
-    }
+    if (!textarea || textarea.readOnly) return false;
 
     const current = readContent();
     pushUndo(current);
 
     const next = redoStack.pop();
-    writeContent(next);
-    applying = false;
+    await writeContent(next);
     updateButtons();
     return true;
   }
@@ -232,13 +232,13 @@
 
     if (e.key === "z" && !e.shiftKey) {
       e.preventDefault();
-      undo();
+      void undo();
       return;
     }
 
     if (e.key === "y" || (e.key === "z" && e.shiftKey) || (e.key === "Z" && e.shiftKey)) {
       e.preventDefault();
-      redo();
+      void redo();
     }
   }
 
@@ -256,6 +256,7 @@
       onTyping,
       beforeChange,
       afterChange,
+      flushTyping,
     };
 
     reset("");

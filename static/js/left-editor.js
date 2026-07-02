@@ -50,7 +50,14 @@
     return window.previewEditor?.messageToMarkdown?.(messageEl) ?? "";
   }
 
-  function syncToTextarea({ force = false, silent = false, trackHistory = false } = {}) {
+  function getMarkdown() {
+    const messageEl = getMessage();
+    if (!messageEl) return "";
+    const markdown = serialize(messageEl);
+    return markdown.trim() === EMPTY_TEXT ? "" : markdown;
+  }
+
+  function syncToTextarea({ force = false, silent = false } = {}) {
     const messageEl = getMessage();
     const textarea = getTextarea();
     if (!messageEl || !textarea || textarea.readOnly) return;
@@ -70,9 +77,6 @@
     dirty = false;
     if (!silent) {
       textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
-    }
-    if (trackHistory) {
-      window.editorHistory?.onTyping?.();
     }
   }
 
@@ -194,8 +198,10 @@
       focused = false;
       saveSelection();
       if (dirty) {
-        syncToTextarea({ force: true, silent: true, trackHistory: true });
+        syncToTextarea({ force: true, silent: true });
+        window.editorHistory?.onTyping?.();
       }
+      window.editorHistory?.flushTyping?.();
       dirty = false;
       updateEmptyState(messageEl);
       window.dispatchEvent(new CustomEvent("left-editor:blur"));
@@ -210,7 +216,8 @@
       updateEmptyState(messageEl);
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
-        syncToTextarea({ force: true, silent: true, trackHistory: true });
+        syncToTextarea({ force: true, silent: true });
+        window.editorHistory?.onTyping?.();
         window.refreshPreview?.(true);
       }, 200);
     });
@@ -639,6 +646,7 @@
       setEditable,
       syncToTextarea,
       refreshFromMarkdown,
+      getMarkdown,
       hasSelection,
       saveSelection: saveSelectionPublic,
       applyFormat,
