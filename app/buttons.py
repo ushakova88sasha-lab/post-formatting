@@ -1,3 +1,4 @@
+import hashlib
 import re
 import secrets
 from urllib.parse import urlparse
@@ -10,6 +11,7 @@ from app.database import ButtonClick, PostButton
 
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 _MAX_BUTTONS = 10
+_CALLBACK_PREFIX = "btn:"
 
 
 class ButtonValidationError(ValueError):
@@ -20,20 +22,28 @@ def _new_click_token() -> str:
     return secrets.token_urlsafe(9)
 
 
-def validate_button_payload(text: str, url: str) -> None:
+def validate_button_text(text: str) -> None:
     label = (text or "").strip()
-    target = (url or "").strip()
     if not label:
         raise ButtonValidationError("Текст кнопки не может быть пустым")
     if len(label) > 64:
         raise ButtonValidationError("Текст кнопки — не более 64 символов")
+
+
+def validate_button_url(url: str) -> None:
+    target = (url or "").strip()
     if not target:
-        raise ButtonValidationError("Укажите URL кнопки")
+        return
     if not _URL_RE.match(target):
         raise ButtonValidationError("URL должен начинаться с http:// или https://")
     parsed = urlparse(target)
     if not parsed.netloc:
         raise ButtonValidationError("Некорректный URL кнопки")
+
+
+def validate_button_payload(text: str, url: str) -> None:
+    validate_button_text(text)
+    validate_button_url(url)
 
 
 def normalize_buttons_payload(buttons: list[dict] | None) -> list[dict]:
@@ -46,6 +56,8 @@ def normalize_buttons_payload(buttons: list[dict] | None) -> list[dict]:
     for index, item in enumerate(buttons):
         text = str(item.get("text", "")).strip()
         url = str(item.get("url", "")).strip()
+        if not text and not url:
+            continue
         validate_button_payload(text, url)
         normalized.append({"text": text, "url": url, "position": index})
     return normalized
@@ -84,8 +96,8 @@ def click_count_map(db: Session, button_ids: list[int]) -> dict[int, int]:
     if not button_ids:
         return {}
     rows = (
-        db.query(ButtonClick.button_id, func.count(ButtonClick.id))
-        .filter(ButtonClick.button_id.in_(button_ids))
+        db.query(ButtonClick.button_id, func.count(func.distinct(ButtonClick.visitor_hash)))
+        .filter(ButtonClick.button_id.in_(button_ids), ButtonClick.visitor_hash != "")
         .group_by(ButtonClick.button_id)
         .all()
     )
@@ -93,13 +105,15 @@ def click_count_map(db: Session, button_ids: list[int]) -> dict[int, int]:
 
 
 def button_to_dict(button: PostButton, click_count: int = 0) -> dict:
+    has_url = bool(button.url.strip())
     return {
         "id": button.id,
         "text": button.text,
         "url": button.url,
         "position": button.position,
         "click_count": click_count,
-        "track_url": tracked_url(button.click_token),
+        "has_url": has_url,
+        "track_url": tracked_url(button.click_token) if has_url else None,
     }
 
 
@@ -118,16 +132,55 @@ def tracked_url(click_token: str) -> str:
     return f"{settings.public_base_url.rstrip('/')}/go/{click_token}"
 
 
-def build_inline_keyboard(buttons: list[PostButton]) -> dict:
-    keyboard = [[{"text": button.text, "url": tracked_url(button.click_token)}] for button in buttons]
+def _keyboard_button(button: PostButton) -> dict:
+    if button.url.strip():
+        return {"text": button.text, "url": tracked_url(button.click_token)}
+    callback_data = f"{_CALLBACK_PREFIX}{button.click_token}"
+    if len(callback_data.encode("utf-8")) > 64:
+        callback_data = callback_data[:64]
+    return {"text": button.text, "callback_data": callback_data}
+
+
+def build_inline_keyboard(buttons: list[PostButton]) -> dict | None:
+    visible = [button for button in buttons if button.text.strip()]
+    if not visible:
+        return None
+    keyboard = [[_keyboard_button(button)] for button in visible]
     return {"inline_keyboard": keyboard}
 
 
-def record_click(db: Session, click_token: str, user_agent: str | None = None) -> str:
+def visitor_hash_from_request(client_host: str | None, user_agent: str | None, forwarded_for: str | None) -> str:
+    ip = (forwarded_for or client_host or "unknown").split(",")[0].strip()
+    ua = (user_agent or "").strip()
+    digest = hashlib.sha256(f"{ip}|{ua}".encode("utf-8")).hexdigest()
+    return digest[:32]
+
+
+def record_click(
+    db: Session,
+    click_token: str,
+    *,
+    visitor_hash: str,
+    user_agent: str | None = None,
+) -> str:
     button = db.query(PostButton).filter(PostButton.click_token == click_token).first()
     if not button:
         raise LookupError("Кнопка не найдена")
+    if not button.url.strip():
+        raise LookupError("У кнопки нет ссылки")
 
-    db.add(ButtonClick(button_id=button.id, user_agent=user_agent))
-    db.commit()
+    exists = (
+        db.query(ButtonClick.id)
+        .filter(ButtonClick.button_id == button.id, ButtonClick.visitor_hash == visitor_hash)
+        .first()
+    )
+    if not exists:
+        db.add(
+            ButtonClick(
+                button_id=button.id,
+                user_agent=user_agent,
+                visitor_hash=visitor_hash,
+            )
+        )
+        db.commit()
     return button.url

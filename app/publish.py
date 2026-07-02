@@ -16,5 +16,5 @@ def post_buttons_for_publish(db: Session, post_id: int) -> list[PostButton]:
 
 async def publish_post_to_telegram(post: Post, db: Session) -> int:
     buttons = post_buttons_for_publish(db, post.id)
-    reply_markup = build_inline_keyboard(buttons) if buttons else None
+    reply_markup = build_inline_keyboard(buttons)
     return await send_message(post.content, reply_markup=reply_markup)

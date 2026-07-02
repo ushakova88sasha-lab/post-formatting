@@ -77,6 +77,54 @@ def test_click_redirect_counts_and_redirects(client, auth_cookies):
     assert refreshed["buttons"][0]["click_count"] == 1
 
 
+def test_unique_clicks_count_once_per_visitor(client, auth_cookies):
+    post = client.post(
+        "/api/posts",
+        json={
+            "title": "Уникальные клики",
+            "content": "Текст",
+            "buttons": [{"text": "Сайт", "url": "https://example.com"}],
+        },
+        cookies=auth_cookies,
+    ).json()
+    token = post["buttons"][0]["track_url"].rsplit("/", 1)[-1]
+
+    for _ in range(3):
+        response = client.get(f"/go/{token}", follow_redirects=False)
+        assert response.status_code == 302
+
+    refreshed = client.get(f"/api/posts/{post['id']}", cookies=auth_cookies).json()
+    assert refreshed["buttons"][0]["click_count"] == 1
+
+
+def test_button_without_url_is_allowed(client, auth_cookies):
+    response = client.post(
+        "/api/posts",
+        json={
+            "title": "Без ссылки",
+            "content": "Текст",
+            "buttons": [{"text": "Подробнее", "url": ""}],
+        },
+        cookies=auth_cookies,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["buttons"]) == 1
+    assert data["buttons"][0]["text"] == "Подробнее"
+    assert data["buttons"][0]["url"] == ""
+    assert data["buttons"][0]["track_url"] is None
+    assert data["buttons"][0]["has_url"] is False
+
+
+def test_build_inline_keyboard_uses_callback_for_text_only_buttons():
+    from app.buttons import build_inline_keyboard
+    from app.database import PostButton
+
+    button = PostButton(text="Подробнее", url="", position=0, click_token="abc123")
+    keyboard = build_inline_keyboard([button])
+    assert keyboard == {"inline_keyboard": [[{"text": "Подробнее", "callback_data": "btn:abc123"}]]}
+
+
 def test_publish_sends_inline_keyboard(client, auth_cookies):
     post = client.post(
         "/api/posts",

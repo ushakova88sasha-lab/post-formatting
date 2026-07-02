@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from app.config import settings
@@ -58,6 +58,7 @@ class PostButton(Base):
 
 class ButtonClick(Base):
     __tablename__ = "button_clicks"
+    __table_args__ = (UniqueConstraint("button_id", "visitor_hash", name="uq_button_visitor"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     button_id: Mapped[int] = mapped_column(
@@ -65,6 +66,7 @@ class ButtonClick(Base):
     )
     clicked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    visitor_hash: Mapped[str] = mapped_column(String(64), default="")
     button: Mapped["PostButton"] = relationship(back_populates="clicks")
 
 
@@ -82,11 +84,29 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+def _migrate_schema() -> None:
+    inspector = inspect(engine)
+    if "button_clicks" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("button_clicks")}
+    if "visitor_hash" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE button_clicks ADD COLUMN visitor_hash VARCHAR(64) DEFAULT ''"))
+            conn.execute(
+                text(
+                    "UPDATE button_clicks SET visitor_hash = 'legacy:' || id "
+                    "WHERE visitor_hash IS NULL OR visitor_hash = ''"
+                )
+            )
+
+
 def init_db() -> None:
     import os
 
     os.makedirs("data", exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    _migrate_schema()
 
     from app.settings_store import seed_from_env
 

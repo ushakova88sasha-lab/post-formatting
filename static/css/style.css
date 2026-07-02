@@ -267,6 +267,7 @@ select {
 .post-item-title {
   font-size: 0.88rem;
   font-weight: 500;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -302,11 +303,16 @@ select {
   flex: 1;
   font-size: 1.1rem;
   font-weight: 600;
+  color: var(--text);
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
   padding: 0.4rem 0;
+}
+
+.editor-header input::placeholder {
+  color: var(--text-muted);
 }
 
 .editor-header input:focus {
@@ -1128,6 +1134,14 @@ select {
 
 .tg-inline-button:hover {
   background: rgba(42, 171, 238, 0.25);
+}
+
+.tg-inline-button-static {
+  cursor: default;
+}
+
+.tg-inline-button-static:hover {
+  background: rgba(42, 171, 238, 0.15);
 }
 
 .markdown-hint {
