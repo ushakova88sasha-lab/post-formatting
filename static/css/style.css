@@ -1136,14 +1136,6 @@ select {
   background: rgba(42, 171, 238, 0.25);
 }
 
-.tg-inline-button-static {
-  cursor: default;
-}
-
-.tg-inline-button-static:hover {
-  background: rgba(42, 171, 238, 0.15);
-}
-
 .markdown-hint {
   margin-top: 0.75rem;
   font-size: 0.78rem;

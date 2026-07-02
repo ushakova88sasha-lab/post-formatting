@@ -97,32 +97,17 @@ def test_unique_clicks_count_once_per_visitor(client, auth_cookies):
     assert refreshed["buttons"][0]["click_count"] == 1
 
 
-def test_button_without_url_is_allowed(client, auth_cookies):
+def test_empty_button_url_rejected(client, auth_cookies):
     response = client.post(
         "/api/posts",
         json={
-            "title": "Без ссылки",
+            "title": "Ошибка",
             "content": "Текст",
-            "buttons": [{"text": "Подробнее", "url": ""}],
+            "buttons": [{"text": "Кнопка", "url": ""}],
         },
         cookies=auth_cookies,
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["buttons"]) == 1
-    assert data["buttons"][0]["text"] == "Подробнее"
-    assert data["buttons"][0]["url"] == ""
-    assert data["buttons"][0]["track_url"] is None
-    assert data["buttons"][0]["has_url"] is False
-
-
-def test_build_inline_keyboard_uses_callback_for_text_only_buttons():
-    from app.buttons import build_inline_keyboard
-    from app.database import PostButton
-
-    button = PostButton(text="Подробнее", url="", position=0, click_token="abc123")
-    keyboard = build_inline_keyboard([button])
-    assert keyboard == {"inline_keyboard": [[{"text": "Подробнее", "callback_data": "btn:abc123"}]]}
+    assert response.status_code == 400
 
 
 def test_publish_sends_inline_keyboard(client, auth_cookies):

@@ -11,7 +11,6 @@ from app.database import ButtonClick, PostButton
 
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 _MAX_BUTTONS = 10
-_CALLBACK_PREFIX = "btn:"
 
 
 class ButtonValidationError(ValueError):
@@ -33,7 +32,7 @@ def validate_button_text(text: str) -> None:
 def validate_button_url(url: str) -> None:
     target = (url or "").strip()
     if not target:
-        return
+        raise ButtonValidationError("Укажите URL кнопки")
     if not _URL_RE.match(target):
         raise ButtonValidationError("URL должен начинаться с http:// или https://")
     parsed = urlparse(target)
@@ -105,15 +104,13 @@ def click_count_map(db: Session, button_ids: list[int]) -> dict[int, int]:
 
 
 def button_to_dict(button: PostButton, click_count: int = 0) -> dict:
-    has_url = bool(button.url.strip())
     return {
         "id": button.id,
         "text": button.text,
         "url": button.url,
         "position": button.position,
         "click_count": click_count,
-        "has_url": has_url,
-        "track_url": tracked_url(button.click_token) if has_url else None,
+        "track_url": tracked_url(button.click_token),
     }
 
 
@@ -132,20 +129,13 @@ def tracked_url(click_token: str) -> str:
     return f"{settings.public_base_url.rstrip('/')}/go/{click_token}"
 
 
-def _keyboard_button(button: PostButton) -> dict:
-    if button.url.strip():
-        return {"text": button.text, "url": tracked_url(button.click_token)}
-    callback_data = f"{_CALLBACK_PREFIX}{button.click_token}"
-    if len(callback_data.encode("utf-8")) > 64:
-        callback_data = callback_data[:64]
-    return {"text": button.text, "callback_data": callback_data}
-
-
 def build_inline_keyboard(buttons: list[PostButton]) -> dict | None:
-    visible = [button for button in buttons if button.text.strip()]
-    if not visible:
+    keyboard_buttons = [button for button in buttons if button.text.strip() and button.url.strip()]
+    if not keyboard_buttons:
         return None
-    keyboard = [[_keyboard_button(button)] for button in visible]
+    keyboard = [
+        [{"text": button.text, "url": tracked_url(button.click_token)}] for button in keyboard_buttons
+    ]
     return {"inline_keyboard": keyboard}
 
 
@@ -166,8 +156,6 @@ def record_click(
     button = db.query(PostButton).filter(PostButton.click_token == click_token).first()
     if not button:
         raise LookupError("Кнопка не найдена")
-    if not button.url.strip():
-        raise LookupError("У кнопки нет ссылки")
 
     exists = (
         db.query(ButtonClick.id)

@@ -297,6 +297,12 @@ async function createPost() {
 
 async function savePost() {
   if (!currentPostId) return;
+  const buttonError = window.postButtons?.validateButtonsPayload?.();
+  if (buttonError) {
+    showAlert(buttonError);
+    return;
+  }
+
   const title = document.getElementById("post-title").value;
   const content = document.getElementById("post-content").value;
   const buttons = window.postButtons?.getButtonsPayload() || [];

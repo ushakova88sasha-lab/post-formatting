@@ -45,14 +45,15 @@
           <input
             type="url"
             class="input button-url-input"
-            placeholder="Ссылка (необязательно)"
+            placeholder="https://example.com"
             value="${escapeHtml(button.url)}"
             ${isReadOnly ? "readonly" : ""}
+            required
           >
         </div>
         <div class="button-row-actions">
           ${
-            isPublished && button.url.trim()
+            isPublished
               ? `<span class="button-click-count" title="Уникальные клики">${button.click_count} уник. кликов</span>`
               : ""
           }
@@ -99,7 +100,7 @@
     const container = document.getElementById("preview-buttons");
     if (!container) return;
 
-    const validButtons = buttons.filter((button) => button.text.trim());
+    const validButtons = buttons.filter((button) => button.text.trim() && button.url.trim());
     if (!validButtons.length) {
       container.innerHTML = "";
       container.classList.add("hidden");
@@ -108,13 +109,10 @@
 
     container.classList.remove("hidden");
     container.innerHTML = validButtons
-      .map((button) => {
-        const label = escapeHtml(button.text.trim());
-        if (button.url.trim()) {
-          return `<a class="tg-inline-button" href="${escapeHtml(button.url)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-        }
-        return `<span class="tg-inline-button tg-inline-button-static">${label}</span>`;
-      })
+      .map(
+        (button) =>
+          `<a class="tg-inline-button" href="${escapeHtml(button.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(button.text.trim())}</a>`
+      )
       .join("");
   }
 
@@ -152,11 +150,29 @@
 
   function getButtonsPayload() {
     return buttons
-      .filter((button) => button.text.trim())
+      .filter((button) => button.text.trim() || button.url.trim())
       .map((button) => ({
         text: button.text.trim(),
         url: button.url.trim(),
       }));
+  }
+
+  function validateButtonsPayload() {
+    for (const button of buttons) {
+      const text = button.text.trim();
+      const url = button.url.trim();
+      if (!text && !url) continue;
+      if (!text) {
+        return "Укажите текст кнопки";
+      }
+      if (!url) {
+        return "Укажите URL кнопки";
+      }
+      if (!/^https?:\/\//i.test(url)) {
+        return "URL кнопки должен начинаться с http:// или https://";
+      }
+    }
+    return null;
   }
 
   function clearButtons() {
@@ -170,6 +186,7 @@
     setButtons,
     setReadOnly,
     getButtonsPayload,
+    validateButtonsPayload,
     clearButtons,
     renderPreviewButtons,
   };
