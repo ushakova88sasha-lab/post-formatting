@@ -6,6 +6,7 @@ from app.auth import require_user
 from app.database import get_db
 from app.settings_store import get_bot_token, get_channel_id, mask_token, save_telegram_settings
 from app.stats_publish_log import monthly_published_stats, purge_old_publish_logs
+from app.stats_backfill import backfill_publish_logs, backfill_published_posts
 from app.telegram_runtime import refresh_telegram_state
 from app.tracking import save_tracking_settings, tracking_settings_to_dict
 
@@ -96,8 +97,14 @@ async def verify_telegram_settings(
 
 @router.get("/stats", response_model=MonthlyStatsResponse)
 async def get_publish_stats(db: Session = Depends(get_db), _: str = Depends(require_user)):
+    backfill_publish_logs(db)
     purge_old_publish_logs(db)
     return monthly_published_stats(db)
+
+
+@router.post("/stats/backfill")
+async def run_stats_backfill(db: Session = Depends(get_db), _: str = Depends(require_user)):
+    return await backfill_published_posts(db)
 
 
 @router.get("/tracking", response_model=TrackingSettingsResponse)

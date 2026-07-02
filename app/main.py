@@ -6,11 +6,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, SessionLocal
 from app.post_retention import purge_expired_posts_session
 from app.routers import auth, clicks, posts, settings as settings_router, uploads
 from app.scheduler import start_scheduler, stop_scheduler
 from app.settings_store import get_channel_id
+from app.stats_backfill import backfill_published_posts
 from app.telegram_runtime import refresh_telegram_state
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -23,6 +24,11 @@ async def lifespan(app: FastAPI):
     init_db()
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     purge_expired_posts_session()
+    db = SessionLocal()
+    try:
+        await backfill_published_posts(db)
+    finally:
+        db.close()
     await refresh_telegram_state(app)
     start_scheduler()
     yield

@@ -1,6 +1,7 @@
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
-from app.database import PostLink, PublishedPostLog, SessionLocal
+from app.database import Post, PostLink, PostStatus, PublishedPostLog, SessionLocal
 
 
 def test_monthly_stats_empty(client, auth_cookies):
@@ -112,6 +113,37 @@ def test_post_stats_only_for_published(client, auth_cookies):
 
     response = client.get(f"/api/posts/{post['id']}/stats", cookies=auth_cookies)
     assert response.status_code == 400
+
+
+def test_backfill_adds_existing_published_posts(client, auth_cookies):
+    post = client.post(
+        "/api/posts",
+        json={"title": "Старый пост", "content": "Текст [ссылка](https://example.com/old)"},
+        cookies=auth_cookies,
+    ).json()
+
+    db = SessionLocal()
+    try:
+        row = db.get(Post, post["id"])
+        row.status = PostStatus.PUBLISHED.value
+        row.published_at = datetime.utcnow()
+        row.telegram_message_id = 999
+        db.commit()
+    finally:
+        db.close()
+
+    backfill = client.post("/api/settings/stats/backfill", cookies=auth_cookies)
+    assert backfill.status_code == 200
+    data = backfill.json()
+    assert data["logs_added"] >= 1
+    assert data["links_synced"] >= 1
+
+    stats = client.get("/api/settings/stats", cookies=auth_cookies).json()
+    assert stats["total"] >= 1
+
+    post_stats = client.get(f"/api/posts/{post['id']}/stats", cookies=auth_cookies)
+    assert post_stats.status_code == 200
+    assert len(post_stats.json()["links"]) == 1
 
 
 def test_published_log_survives_post_deletion(client, auth_cookies):

@@ -23,6 +23,7 @@ from app.post_utils import (
 )
 from app.publish import finalize_published_post, publish_post_to_telegram
 from app.scheduler import cancel_scheduled_post, publish_post_by_id, schedule_post
+from app.stats_backfill import ensure_post_stats_ready
 from app.telegram_client import TelegramError
 from app.telegram_stats import channel_stats_to_dict
 from app.tracking import links_for_post, tracking_settings_to_dict
@@ -246,6 +247,8 @@ async def get_post_stats(post_id: int, db: Session = Depends(get_db), _: str = D
         raise HTTPException(status_code=404, detail="Пост не найден")
     if post.status != PostStatus.PUBLISHED.value:
         raise HTTPException(status_code=400, detail="Статистика доступна только для опубликованных постов")
+
+    await ensure_post_stats_ready(db, post)
 
     return {
         "post_id": post.id,
