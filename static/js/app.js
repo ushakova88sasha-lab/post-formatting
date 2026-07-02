@@ -349,6 +349,7 @@ async function selectPost(id) {
   currentPostId = post.id;
   document.getElementById("post-title").value = post.title || "";
   document.getElementById("post-content").value = post.content || "";
+  window.editorHistory?.reset(post.content || "");
   window.postButtons?.setButtons(post.buttons || []);
 
   if (post.scheduled_at) {

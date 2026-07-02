@@ -534,8 +534,10 @@
 
   function setToolbarEnabled(enabled) {
     document.querySelectorAll(".fmt-btn").forEach((btn) => {
+      if (btn.dataset.action === "undo" || btn.dataset.action === "redo") return;
       btn.disabled = !enabled;
     });
+    window.editorHistory?.setEnabled(enabled);
     ["image-file-input", "video-file-input", "audio-file-input"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
@@ -567,6 +569,14 @@
     }
 
     e.preventDefault();
+    if (action === "undo") {
+      window.editorHistory?.undo();
+      return;
+    }
+    if (action === "redo") {
+      window.editorHistory?.redo();
+      return;
+    }
     if (action === "clear-format") {
       if (!tryClearVisualFormat()) {
         clearMarkdownFormatting();
