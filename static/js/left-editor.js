@@ -14,7 +14,7 @@
     underline: "underline",
   };
 
-  let mode = localStorage.getItem(MODE_KEY) === "visual" ? "visual" : "markdown";
+  let mode = localStorage.getItem(MODE_KEY) === "markdown" ? "markdown" : "visual";
   let editable = true;
   let focused = false;
   let dirty = false;
