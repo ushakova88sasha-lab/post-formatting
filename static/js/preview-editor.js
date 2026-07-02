@@ -356,7 +356,10 @@
     window.editorHistory?.beforeChange?.();
 
     if (window.visualFormat?.toggleWrapRange?.(range, messageEl, tagName, className)) {
-      savePreviewSelection();
+      const selAfter = window.getSelection();
+      if (selAfter && selAfter.rangeCount) {
+        savedPreviewRange = selAfter.getRangeAt(0).cloneRange();
+      }
       dirty = true;
       syncToTextarea({ silent: true });
       window.editorHistory?.afterChange?.();
@@ -371,15 +374,20 @@
 
     try {
       range.surroundContents(el);
+      const newRange = document.createRange();
+      newRange.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
     } catch {
       const fragment = range.extractContents();
       el.appendChild(fragment);
       range.insertNode(el);
-      range.selectNodeContents(el);
+      const newRange = document.createRange();
+      newRange.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
     }
 
-    sel.removeAllRanges();
-    sel.addRange(range);
     savePreviewSelection();
     dirty = true;
     syncToTextarea({ silent: true });

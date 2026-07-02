@@ -144,53 +144,55 @@
     return true;
   }
 
-  function toggleMarkdownWrap(before, after, unwrapFn) {
-    const sel = ensureMarkdownSelection();
-    if (!sel) return false;
-
-    const { textarea, value, start, end, selected } = sel;
-
+  function isMarkdownWrapped(value, start, end, selected, before, after) {
     if (
       selected.length >= before.length + after.length &&
       selected.startsWith(before) &&
       selected.endsWith(after)
     ) {
-      const inner = selected.slice(before.length, selected.length - after.length);
-      replaceExactSelection(textarea, start, end, inner, start, start + inner.length);
-      return true;
+      return "inner";
     }
-
     if (
       start >= before.length &&
       value.substring(start - before.length, start) === before &&
       value.substring(end, end + after.length) === after
     ) {
-      const newStart = start - before.length;
-      replaceExactSelection(
-        textarea,
-        newStart,
-        end + after.length,
-        selected,
-        newStart,
-        newStart + selected.length
-      );
+      return "outer";
+    }
+    return null;
+  }
+
+  function toggleMarkdownWrap(before, after) {
+    const sel = ensureMarkdownSelection();
+    if (!sel) return false;
+
+    let { textarea, start, end, selected } = sel;
+    let value = textarea.value;
+    let anyWrapped = false;
+
+    while (true) {
+      const mode = isMarkdownWrapped(value, start, end, selected, before, after);
+      if (!mode) break;
+      anyWrapped = true;
+      if (mode === "inner") {
+        selected = selected.slice(before.length, selected.length - after.length);
+      } else {
+        start -= before.length;
+        end += after.length;
+      }
+      value = value.substring(0, start) + selected + value.substring(end);
+    }
+
+    if (anyWrapped) {
+      replaceExactSelection(textarea, start, end, selected, start, start + selected.length);
       return true;
     }
 
-    if (unwrapFn) {
-      const inner = unwrapFn(selected);
-      if (inner !== null) {
-        replaceExactSelection(textarea, start, end, inner, start, start + inner.length);
-        return true;
-      }
-    }
-
-    const wrapped = before + selected + after;
     replaceExactSelection(
       textarea,
       start,
       end,
-      wrapped,
+      before + selected + after,
       start + before.length,
       start + before.length + selected.length
     );

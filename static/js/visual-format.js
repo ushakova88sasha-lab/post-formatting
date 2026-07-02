@@ -14,38 +14,49 @@
   function matchesElement(el, tagName, className) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
     if (el.tagName.toLowerCase() !== tagName.toLowerCase()) return false;
-    if (className && !el.classList.contains(className)) return false;
-    return true;
+    if (!className) return true;
+    if (className === "tg-mark" && tagName.toLowerCase() === "mark") {
+      return el.classList.contains("tg-mark") || !el.className;
+    }
+    return el.classList.contains(className);
   }
 
-  function findWrappingElement(range, boundary, tagName, className) {
+  function findInnermostWrapper(range, boundary, tagName, className) {
     let node = range.commonAncestorContainer;
     if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+
+    let innermost = null;
     while (node && node !== boundary) {
       if (matchesElement(node, tagName, className)) {
-        return node;
+        innermost = node;
       }
       node = node.parentElement;
     }
-    return null;
+    return innermost;
   }
 
-  function isRangeCoveringNodeContents(range, el) {
+  function isSelectionInsideElement(range, el) {
     const elRange = document.createRange();
     elRange.selectNodeContents(el);
     return (
-      range.compareBoundaryPoints(Range.START_TO_START, elRange) <= 0 &&
-      range.compareBoundaryPoints(Range.END_TO_END, elRange) >= 0
+      range.compareBoundaryPoints(Range.START_TO_START, elRange) >= 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, elRange) <= 0
     );
   }
 
   function toggleWrapRange(range, boundary, tagName, className) {
-    const wrapper = findWrappingElement(range, boundary, tagName, className);
-    if (wrapper && isRangeCoveringNodeContents(range, wrapper)) {
+    let unwrapped = false;
+
+    while (true) {
+      const wrapper = findInnermostWrapper(range, boundary, tagName, className);
+      if (!wrapper || !isSelectionInsideElement(range, wrapper)) {
+        break;
+      }
       unwrapElement(wrapper);
-      return true;
+      unwrapped = true;
     }
-    return false;
+
+    return unwrapped;
   }
 
   function findClosestBlock(range, messageEl) {
@@ -86,8 +97,8 @@
   }
 
   function toggleBlockTag(range, messageEl, tagName) {
-    const wrapper = findWrappingElement(range, messageEl, tagName);
-    if (wrapper && isRangeCoveringNodeContents(range, wrapper)) {
+    const wrapper = findInnermostWrapper(range, messageEl, tagName);
+    if (wrapper && isSelectionInsideElement(range, wrapper)) {
       unwrapElement(wrapper);
       return true;
     }
@@ -112,8 +123,8 @@
   }
 
   function toggleQuote(range, messageEl) {
-    const wrapper = findWrappingElement(range, messageEl, "blockquote");
-    if (wrapper && isRangeCoveringNodeContents(range, wrapper)) {
+    const wrapper = findInnermostWrapper(range, messageEl, "blockquote");
+    if (wrapper && isSelectionInsideElement(range, wrapper)) {
       unwrapElement(wrapper);
       return true;
     }
@@ -133,8 +144,8 @@
   }
 
   function toggleCenter(range, messageEl) {
-    const wrapper = findWrappingElement(range, messageEl, "aside");
-    if (wrapper && isRangeCoveringNodeContents(range, wrapper)) {
+    const wrapper = findInnermostWrapper(range, messageEl, "aside");
+    if (wrapper && isSelectionInsideElement(range, wrapper)) {
       unwrapElement(wrapper);
       return true;
     }
@@ -143,15 +154,21 @@
     return surroundRange(range, aside);
   }
 
+  function queryFormatState(range, boundary, tagName, className) {
+    const wrapper = findInnermostWrapper(range, boundary, tagName, className);
+    return Boolean(wrapper && isSelectionInsideElement(range, wrapper));
+  }
+
   window.visualFormat = {
     unwrapElement,
-    findWrappingElement,
-    isRangeCoveringNodeContents,
+    findInnermostWrapper,
+    isSelectionInsideElement,
     toggleWrapRange,
     toggleBlockTag,
     toggleQuote,
     toggleCenter,
     findClosestBlock,
     matchesElement,
+    queryFormatState,
   };
 })();
