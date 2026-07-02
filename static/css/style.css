@@ -263,14 +263,24 @@ select {
 }
 
 .post-filter-btn {
-  padding: 0.45rem 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.38rem 0.25rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-2);
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 500;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
