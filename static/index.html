@@ -186,11 +186,14 @@
           Медиа: 📷 🎬 🎵. Эмодзи 😀. Маркер <mark class="fmt-marker-icon">М</mark>, по центру ≡, цитата ❝, блок ▼. Списки и таблицы.
         </p>
 
-        <div class="copy-html-row">
-          <button type="button" class="btn btn-secondary" id="copy-html-btn">Копировать HTML</button>
-          <button type="button" class="btn btn-secondary" id="copy-markdown-btn">Копировать Markdown</button>
-          <span class="field-hint copy-html-hint">HTML — свёрстанный пост; Markdown — формат Telegram Rich Markdown (без кнопок)</span>
-        </div>
+        <details class="copy-export-panel">
+          <summary class="copy-export-summary">Копирование</summary>
+          <div class="copy-export-body">
+            <button type="button" class="btn btn-secondary" id="copy-html-btn">Копировать HTML</button>
+            <button type="button" class="btn btn-secondary" id="copy-markdown-btn">Копировать Markdown</button>
+            <span class="field-hint copy-export-hint">HTML — свёрстанный пост; Markdown — формат Telegram Rich Markdown (без кнопок)</span>
+          </div>
+        </details>
       </div>
 
       <div id="empty-view" class="empty-state">

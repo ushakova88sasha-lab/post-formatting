@@ -1145,20 +1145,51 @@ select {
   line-height: 1.5;
 }
 
-.copy-html-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
+.copy-export-panel {
   margin-top: 1rem;
-  padding: 0.85rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
-.copy-html-hint {
+.copy-export-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+  user-select: none;
+}
+
+.copy-export-summary::-webkit-details-marker {
+  display: none;
+}
+
+.copy-export-summary::before {
+  content: "▸";
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.copy-export-panel[open] .copy-export-summary::before {
+  transform: rotate(90deg);
+}
+
+.copy-export-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.85rem 0.85rem;
+}
+
+.copy-export-hint {
   margin: 0;
+  flex-basis: 100%;
 }
 
 .auth-loop-banner {
