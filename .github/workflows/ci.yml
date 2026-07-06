@@ -33,3 +33,21 @@ jobs:
           ADMIN_PASSWORD: "test-password"
           SESSION_SECRET: "test-session-secret-32-characters-long"
         run: pytest -q
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r tests_e2e/requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run browser formatting tests
+        run: pytest tests_e2e -v
