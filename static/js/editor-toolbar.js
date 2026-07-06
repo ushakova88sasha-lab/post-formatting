@@ -665,7 +665,7 @@
         toggleMarkdownWrap("**", "**");
         break;
       case "italic":
-        toggleMarkdownWrap("_", "_");
+        toggleMarkdownWrap("*", "*");
         break;
       case "strike":
         toggleMarkdownWrap("~~", "~~");

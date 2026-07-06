@@ -65,7 +65,7 @@
         return `**${inner()}**`;
       case "i":
       case "em":
-        return `_${inner()}_`;
+        return `*${inner()}*`;
       case "s":
       case "del":
         return `~~${inner()}~~`;
