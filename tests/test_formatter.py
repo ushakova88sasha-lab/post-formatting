@@ -63,3 +63,20 @@ def test_cyrillic_italic_in_preview():
 def test_cyrillic_underscore_italic_in_preview():
     html = preview_html("Обычный _курсив_ текст")
     assert "<em>курсив</em>" in html
+
+
+def test_known_custom_emoji_renders_preview_image():
+    html = preview_html(
+        "Привет ![👍](tg://emoji?id=123456)",
+        known_emoji_ids={"123456"},
+    )
+    assert 'src="/api/emoji/preview/123456"' in html
+    assert "tg://emoji" not in html
+
+
+def test_unknown_custom_emoji_falls_back_to_alt_text():
+    html = preview_html("Привет ![👍](tg://emoji?id=999999)")
+    assert "tg://emoji" not in html
+    assert '<img src="tg://emoji' not in html
+    assert "tg-custom-emoji-fallback" in html
+    assert "👍" in html

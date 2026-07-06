@@ -4,6 +4,8 @@ from pathlib import Path
 
 import markdown
 
+from app.custom_emoji import CUSTOM_EMOJI_MD_RE
+
 MEDIA_RE = re.compile(
     r'!\[([^\]]*)\]\((https?://[^)\s]+|/uploads/[^)\s]+)(?:\s+"([^"]*)")?\)',
     re.IGNORECASE,
@@ -63,6 +65,28 @@ def _preprocess_media(text: str) -> str:
         )
 
     return MEDIA_RE.sub(repl, text)
+
+
+def _preprocess_custom_emoji(text: str, known_ids: set[str] | None = None) -> str:
+    """Кастомные (премиум) эмодзи ![alt](tg://emoji?id=...) — браузер не умеет
+    загружать tg:// как обычную картинку, поэтому без этой обработки
+    markdown-библиотека рисует битую картинку. Если набор с этим эмодзи
+    импортирован в Настройках — показываем реальный превью-стикер через
+    /api/emoji/preview/<id>, иначе — просто fallback-символ (alt)."""
+    known_ids = known_ids or set()
+
+    def repl(match: re.Match) -> str:
+        alt = match.group(1) or "✨"
+        emoji_id = match.group(2)
+        safe_alt = html.escape(alt)
+        if emoji_id in known_ids:
+            return (
+                f'<img class="tg-custom-emoji" src="/api/emoji/preview/{emoji_id}" '
+                f'alt="{safe_alt}" title="Кастомный эмодзи">'
+            )
+        return f'<span class="tg-custom-emoji-fallback" title="Кастомный эмодзи (нет превью)">{safe_alt}</span>'
+
+    return CUSTOM_EMOJI_MD_RE.sub(repl, text)
 
 
 def _preprocess_checklists(text: str) -> str:
@@ -135,7 +159,8 @@ def _render_center_block(content: str) -> str:
     return f"<aside>{inner_html}</aside>"
 
 
-def _markdown_to_html(text: str) -> str:
+def _markdown_to_html(text: str, known_emoji_ids: set[str] | None = None) -> str:
+    text = _preprocess_custom_emoji(text, known_emoji_ids)
     text = _preprocess_media(text)
     text = _preprocess_checklists(text)
 
@@ -191,11 +216,11 @@ def _sanitize_html(raw_html: str) -> str:
     return "".join(parts)
 
 
-def preview_html(text: str) -> str:
+def preview_html(text: str, known_emoji_ids: set[str] | None = None) -> str:
     """HTML для превью в браузере."""
     if not text.strip():
         return "<p class='empty'>Начните вводить текст…</p>"
 
-    raw_html = _markdown_to_html(text)
+    raw_html = _markdown_to_html(text, known_emoji_ids)
     result = _sanitize_html(raw_html)
     return f'<div class="tg-message tg-rich">{result}</div>'

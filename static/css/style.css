@@ -1134,6 +1134,19 @@ select {
   border-radius: 8px;
 }
 
+.tg-custom-emoji {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.2em;
+  object-fit: contain;
+}
+
+.tg-custom-emoji-fallback {
+  display: inline-block;
+  cursor: help;
+}
+
 .tg-image-caption,
 .tg-media-caption {
   margin-top: 0.35rem;

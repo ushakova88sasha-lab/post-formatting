@@ -11,6 +11,7 @@ from app.buttons import (
     replace_post_buttons,
 )
 from app.config import settings
+from app.custom_emoji import build_emoji_alt_map
 from app.database import Post, PostStatus, get_db
 from app.formatter import preview_html
 from app.markdown_telegram import prepare_markdown_for_telegram
@@ -24,6 +25,7 @@ from app.post_utils import (
 )
 from app.publish import finalize_published_post, publish_post_to_telegram
 from app.scheduler import cancel_scheduled_post, publish_post_by_id, schedule_post
+from app.settings_store import get_custom_emoji_packs
 from app.stats_backfill import ensure_post_stats_ready
 from app.telegram_client import TelegramError
 from app.telegram_stats import channel_stats_to_dict
@@ -214,8 +216,13 @@ async def delete_post(post_id: int, db: Session = Depends(get_db), _: str = Depe
 
 
 @router.post("/preview")
-async def preview(payload: PreviewRequest, _: str = Depends(require_user)):
-    return {"html": preview_html(payload.content)}
+async def preview(
+    payload: PreviewRequest,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_user),
+):
+    known_emoji_ids = set(build_emoji_alt_map(get_custom_emoji_packs(db)).keys())
+    return {"html": preview_html(payload.content, known_emoji_ids)}
 
 
 @router.post("/export/telegram-markdown")
