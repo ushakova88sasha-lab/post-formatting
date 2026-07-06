@@ -5,7 +5,7 @@ from pathlib import Path
 import markdown
 
 MEDIA_RE = re.compile(
-    r'!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"([^"]*)")?\)',
+    r'!\[([^\]]*)\]\((https?://[^)\s]+|/uploads/[^)\s]+)(?:\s+"([^"]*)")?\)',
     re.IGNORECASE,
 )
 

@@ -20,6 +20,7 @@
   let dirty = false;
   let syncTimer = null;
   let savedRange = null;
+  let savedCaretOffset = null;
   let refreshToken = 0;
 
   function getTextarea() {
@@ -80,6 +81,59 @@
     }
   }
 
+  function offsetFromRange(range) {
+    const messageEl = getMessage();
+    if (!messageEl || !range) return null;
+
+    try {
+      const preRange = document.createRange();
+      preRange.selectNodeContents(messageEl);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const preWrap = document.createElement("div");
+      preWrap.className = "tg-message tg-rich";
+      preWrap.appendChild(preRange.cloneContents());
+      return serialize(preWrap).length;
+    } catch {
+      return null;
+    }
+  }
+
+  function updateSavedCaretOffset(range) {
+    if (!isVisualMode()) return;
+    const offset = offsetFromRange(range);
+    if (offset != null) {
+      savedCaretOffset = offset;
+    }
+  }
+
+  function getSavedInsertOffset({ sync = true } = {}) {
+    const textarea = getTextarea();
+    if (!textarea) return 0;
+
+    if (sync) {
+      syncToTextarea({ force: true, silent: true });
+    }
+    const value = textarea.value;
+
+    if (savedRange) {
+      const fromRange = offsetFromRange(savedRange);
+      if (fromRange != null) {
+        return Math.min(fromRange, value.length);
+      }
+    }
+
+    if (savedCaretOffset != null) {
+      return Math.min(Math.max(savedCaretOffset, 0), value.length);
+    }
+
+    return value.length;
+  }
+
+  function saveCaretPosition() {
+    if (!isVisualMode()) return;
+    saveSelection();
+  }
+
   function saveSelection() {
     const messageEl = getMessage();
     if (!messageEl) return;
@@ -90,6 +144,7 @@
     const range = sel.getRangeAt(0);
     if (messageEl.contains(range.commonAncestorContainer)) {
       savedRange = range.cloneRange();
+      updateSavedCaretOffset(savedRange);
     }
   }
 
@@ -196,7 +251,6 @@
 
     messageEl.addEventListener("blur", () => {
       focused = false;
-      saveSelection();
       if (dirty) {
         syncToTextarea({ force: true, silent: true });
         window.editorHistory?.onTyping?.();
@@ -393,13 +447,8 @@
         applied = vf.toggleCenter(range, messageEl);
         break;
       case "ulist":
-        document.execCommand("insertUnorderedList", false, null);
-        applied = true;
-        break;
       case "olist":
-        document.execCommand("insertOrderedList", false, null);
-        applied = true;
-        break;
+        return false;
       default:
         return false;
     }
@@ -412,6 +461,56 @@
     syncToTextarea({ silent: true });
     window.editorHistory?.afterChange?.();
     window.refreshPreview?.(true);
+    return true;
+  }
+
+  function mapCursorToTextarea() {
+    if (!isVisualMode()) return false;
+
+    const textarea = getTextarea();
+    if (!textarea) return false;
+
+    const offset = getSavedInsertOffset();
+    savedCaretOffset = null;
+
+    textarea.focus();
+    textarea.setSelectionRange(offset, offset);
+    return true;
+  }
+
+  async function insertMarkdownBlock(block) {
+    if (!isVisualMode() || !block) return false;
+
+    const textarea = getTextarea();
+    if (!textarea || textarea.readOnly) return false;
+
+    window.editorHistory?.beforeChange?.();
+
+    const start = getSavedInsertOffset({ sync: true });
+    let before = textarea.value.substring(0, start);
+    let after = textarea.value.substring(start);
+
+    if (before.length > 0 && !before.endsWith("\n")) {
+      before += "\n";
+    }
+    if (before.length > 0 && !before.endsWith("\n\n")) {
+      before += "\n";
+    }
+    if (after.length > 0 && !after.startsWith("\n")) {
+      after = "\n" + after;
+    }
+
+    const insertion = block + "\n";
+    const nextValue = before + insertion + after;
+    textarea.value = nextValue;
+
+    savedCaretOffset = null;
+    savedRange = null;
+    dirty = false;
+    textarea.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    await refreshFromMarkdown();
+    window.refreshPreview?.(true);
+    window.editorHistory?.afterChange?.();
     return true;
   }
 
@@ -429,13 +528,24 @@
     const range = sel.getRangeAt(0);
     if (range.collapsed) return false;
 
+    syncToTextarea({ force: true, silent: true });
+    const value = textarea.value;
+
+    const startOffset = offsetFromRange(range);
+    const endRange = range.cloneRange();
+    endRange.collapse(false);
+    const endOffset = offsetFromRange(endRange);
+
+    if (startOffset != null && endOffset != null && endOffset >= startOffset) {
+      textarea.focus();
+      textarea.setSelectionRange(startOffset, endOffset);
+      return true;
+    }
+
     const selWrap = document.createElement("div");
     selWrap.className = "tg-message tg-rich";
     selWrap.appendChild(range.cloneContents());
     const selMd = serialize(selWrap);
-
-    syncToTextarea({ force: true, silent: true });
-    const value = textarea.value;
 
     if (selMd) {
       const idx = value.indexOf(selMd);
@@ -505,8 +615,15 @@
   function applyFormat(action) {
     if (!isVisualMode() || !hasSelection()) return false;
 
-    if (PREVIEW_COMMANDS[action]) {
-      return applyCommand(PREVIEW_COMMANDS[action]);
+    const commandWraps = {
+      bold: () => wrapSelection("strong"),
+      italic: () => wrapSelection("em"),
+      strike: () => wrapSelection("s"),
+      underline: () => wrapSelection("u"),
+    };
+
+    if (commandWraps[action]) {
+      return commandWraps[action]();
     }
 
     const wraps = {
@@ -657,7 +774,7 @@
 
     const textarea = getTextarea();
     textarea?.addEventListener("focus", () => {
-      if (isVisualMode()) {
+      if (!isVisualMode()) {
         savedRange = null;
       }
     });
@@ -679,9 +796,12 @@
       getMarkdown,
       hasSelection,
       saveSelection: saveSelectionPublic,
+      saveCaretPosition,
       applyFormat,
       applyBlockFormat,
       mapSelectionToTextarea,
+      mapCursorToTextarea,
+      insertMarkdownBlock,
       clearFormatting,
       insertText,
     };

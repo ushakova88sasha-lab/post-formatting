@@ -8,7 +8,7 @@ from app.config import BASE_DIR
 UPLOAD_DIR = BASE_DIR / "data" / "uploads"
 
 MEDIA_MD_RE = re.compile(
-    r'!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"([^"]*)")?\)',
+    r'!\[([^\]]*)\]\((https?://[^)\s]+|/uploads/[^)\s]+)(?:\s+"([^"]*)")?\)',
     re.IGNORECASE,
 )
 

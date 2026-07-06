@@ -50,19 +50,18 @@
   function getSelectionRange(textarea) {
     if (!textarea) return { start: 0, end: 0 };
 
-    let start = textarea.selectionStart;
-    let end = textarea.selectionEnd;
-
-    if (
-      savedTextareaSelection &&
-      (document.activeElement !== textarea || start === end) &&
-      savedTextareaSelection.start !== savedTextareaSelection.end
-    ) {
-      start = savedTextareaSelection.start;
-      end = savedTextareaSelection.end;
+    if (document.activeElement === textarea) {
+      return { start: textarea.selectionStart, end: textarea.selectionEnd };
     }
 
-    return { start, end };
+    if (savedTextareaSelection) {
+      return {
+        start: savedTextareaSelection.start,
+        end: savedTextareaSelection.end,
+      };
+    }
+
+    return { start: textarea.selectionStart, end: textarea.selectionEnd };
   }
 
   function setSelectionRange(textarea, start, end) {
@@ -200,8 +199,11 @@
   }
 
   function tryPreviewFormat(action) {
-    if (window.leftEditor?.applyFormat?.(action)) {
-      return true;
+    if (window.leftEditor?.isVisualMode?.()) {
+      if (window.leftEditor.applyFormat?.(action)) {
+        return true;
+      }
+      return false;
     }
 
     const previewEditor = window.previewEditor;
@@ -319,6 +321,11 @@
     if (!textarea || textarea.readOnly) return;
 
     window.editorHistory?.beforeChange?.();
+
+    if (window.leftEditor?.isVisualMode?.()) {
+      savedTextareaSelection = null;
+      window.leftEditor?.mapCursorToTextarea?.();
+    }
 
     const { start, end } = getSelectionRange(textarea);
     let before = textarea.value.substring(0, start);
@@ -548,7 +555,13 @@
       });
       if (caption === null) return;
 
-      insertBlockAtCursor(buildMediaMarkdown(data.url, caption));
+      const markdown = buildMediaMarkdown(data.url, caption);
+      if (window.leftEditor?.isVisualMode?.()) {
+        const inserted = await window.leftEditor.insertMarkdownBlock?.(markdown);
+        if (inserted) return;
+      }
+
+      insertBlockAtCursor(markdown);
     } catch (err) {
       await window.appModal.alert({
         title: "Ошибка загрузки",
@@ -591,19 +604,28 @@
     const btn = e.target.closest(".fmt-btn");
     if (!btn || btn.disabled) return;
 
+    window.leftEditor?.saveSelection?.();
+    saveTextareaSelection();
+
     const action = btn.dataset.action;
     if (action === "image") {
       e.preventDefault();
+      window.leftEditor?.saveCaretPosition?.();
+      saveTextareaSelection();
       document.getElementById("image-file-input")?.click();
       return;
     }
     if (action === "video") {
       e.preventDefault();
+      window.leftEditor?.saveCaretPosition?.();
+      saveTextareaSelection();
       document.getElementById("video-file-input")?.click();
       return;
     }
     if (action === "audio") {
       e.preventDefault();
+      window.leftEditor?.saveCaretPosition?.();
+      saveTextareaSelection();
       document.getElementById("audio-file-input")?.click();
       return;
     }
@@ -707,7 +729,8 @@
       toolbar.addEventListener("mousedown", (e) => {
         if (e.target.closest(".fmt-btn")) {
           e.preventDefault();
-          window.leftEditor?.saveSelection?.();
+          saveTextareaSelection();
+          window.leftEditor?.saveCaretPosition?.();
           window.previewEditor?.savePreviewSelection?.();
         }
       });

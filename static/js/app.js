@@ -433,7 +433,7 @@ async function reloadPostList({ keepSelection = true } = {}) {
   await loadPosts({ reset: true });
 
   if (selectedId && posts.some((post) => post.id === selectedId)) {
-    renderPostList();
+    await selectPost(selectedId);
     return;
   }
 
@@ -447,8 +447,13 @@ async function reloadPostList({ keepSelection = true } = {}) {
 }
 
 async function selectPost(id) {
-  const post = posts.find((p) => p.id === id) || (await api(`/api/posts/${id}`));
+  const post = await api(`/api/posts/${id}`);
   if (!post) return;
+
+  const index = posts.findIndex((p) => p.id === id);
+  if (index >= 0) {
+    posts[index] = { ...posts[index], ...post };
+  }
 
   currentPostId = post.id;
   document.getElementById("post-title").value = post.title || "";
@@ -556,7 +561,7 @@ async function copyTextToClipboard(text, plainOnly = false) {
 }
 
 async function copyPostHtml() {
-  const content = document.getElementById("post-content").value;
+  const content = getContentForSave();
   if (!content.trim()) {
     showAlert("Пост пустой");
     return;
@@ -591,7 +596,7 @@ async function copyPostHtml() {
 }
 
 async function copyPostMarkdown() {
-  const content = document.getElementById("post-content").value;
+  const content = getContentForSave();
   if (!content.trim()) {
     showAlert("Пост пустой");
     return;
@@ -627,6 +632,19 @@ async function createPost() {
   await selectPost(post.id);
 }
 
+function getContentForSave() {
+  const textarea = document.getElementById("post-content");
+  if (!textarea) return "";
+
+  if (window.leftEditor?.isVisualMode?.()) {
+    window.leftEditor.syncToTextarea?.({ force: true, silent: true });
+  } else if (window.previewEditor?.isDirty?.()) {
+    window.previewEditor.syncToTextarea?.({ silent: true });
+  }
+
+  return textarea.value;
+}
+
 async function savePost() {
   if (!currentPostId) return;
   const buttonError = window.postButtons?.validateButtonsPayload?.();
@@ -636,7 +654,7 @@ async function savePost() {
   }
 
   const title = document.getElementById("post-title").value;
-  const content = document.getElementById("post-content").value;
+  const content = getContentForSave();
   const buttons = window.postButtons?.getButtonsPayload() || [];
 
   await api(`/api/posts/${currentPostId}`, {
