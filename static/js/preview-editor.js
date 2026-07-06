@@ -107,6 +107,50 @@
     }
   }
 
+  const INLINE_TAGS = new Set([
+    "br", "b", "strong", "i", "em", "s", "del", "u", "mark",
+    "code", "sub", "sup", "a", "span", "img",
+  ]);
+
+  function isInlineNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) return true;
+    if (node.nodeType !== Node.ELEMENT_NODE) return false;
+    return INLINE_TAGS.has(node.tagName.toLowerCase());
+  }
+
+  /**
+   * Дочерние узлы блока могут содержать «голый» инлайн-контент (текст и теги
+   * форматирования вроде <mark>/<strong>) прямо рядом с блочными тегами —
+   * так бывает, когда строка не обёрнута в <p> (первая строка поста, строка
+   * после Enter). Такие узлы нельзя отдавать в serializeBlock по одному:
+   * он не знает про инлайн-теги и потеряет их разметку (**, ==, ~~ и т.п.).
+   * Поэтому собираем подряд идущие инлайн-узлы и сериализуем их как один
+   * абзац через serializeInline.
+   */
+  function serializeBlockChildren(children) {
+    const parts = [];
+    let buffer = [];
+
+    function flushBuffer() {
+      if (!buffer.length) return;
+      const text = buffer.map(serializeInline).join("").trim();
+      if (text) parts.push(`${text}\n\n`);
+      buffer = [];
+    }
+
+    children.forEach((node) => {
+      if (isInlineNode(node)) {
+        buffer.push(node);
+      } else {
+        flushBuffer();
+        parts.push(serializeBlock(node));
+      }
+    });
+    flushBuffer();
+
+    return parts.join("");
+  }
+
   function serializeParagraph(el) {
     const text = Array.from(el.childNodes).map(serializeInline).join("");
     return text.replace(/\n+$/, "");
@@ -245,18 +289,16 @@
         if (el.classList.contains("tg-math-block")) {
           return `$$${serializeInline(el)}$$\n\n`;
         }
-        return Array.from(el.childNodes).map(serializeBlock).join("");
+        return serializeBlockChildren(Array.from(el.childNodes));
       default:
-        return Array.from(el.childNodes).map(serializeBlock).join("");
+        return serializeBlockChildren(Array.from(el.childNodes));
     }
   }
 
   function messageToMarkdown(messageEl) {
     if (!messageEl) return "";
 
-    const parts = Array.from(messageEl.childNodes).map(serializeBlock);
-    return parts
-      .join("")
+    return serializeBlockChildren(Array.from(messageEl.childNodes))
       .replace(/\n{3,}/g, "\n\n")
       .trimEnd();
   }
