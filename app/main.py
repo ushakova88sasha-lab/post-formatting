@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -50,6 +50,18 @@ app.include_router(uploads.router)
 app.include_router(settings_router.router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
+@app.middleware("http")
+async def no_stale_cache(request: Request, call_next):
+    """Браузер должен каждый раз спрашивать сервер "не изменился ли файл?"
+    (дешёвый 304-ответ), а не тихо показывать старую закэшированную копию.
+    Без этого правки в JS/CSS/HTML могли не доехать до пользователя даже
+    после успешного деплоя — именно так уже ломалось форматирование."""
+    response = await call_next(request)
+    if request.url.path.startswith(("/static/", "/uploads/")) or request.url.path in ("/", "/login"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/")
