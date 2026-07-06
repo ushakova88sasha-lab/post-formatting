@@ -377,6 +377,7 @@
     const vf = window.visualFormat;
     if (vf?.isFormatActive?.(range, messageEl, tagName, className)) {
       vf.toggleWrapRange(range, messageEl, tagName, className);
+      messageEl.normalize();
       saveSelection();
       dirty = true;
       syncToTextarea({ silent: true });
@@ -403,6 +404,10 @@
       sel.removeAllRanges();
       sel.addRange(newRange);
     }
+
+    // surroundContents/insertNode может оставить пустые текстовые узлы-«призраки»
+    // рядом с новым элементом — они мешают повторному определению «уже отформатировано».
+    messageEl.normalize();
 
     saveSelection();
     dirty = true;
@@ -454,6 +459,10 @@
     }
 
     if (!applied) return false;
+
+    // surroundContents/insertNode может оставить пустые текстовые узлы-«призраки»
+    // рядом с новым элементом — они мешают повторному определению «уже отформатировано».
+    messageEl.normalize();
 
     saveSelection();
     dirty = true;
