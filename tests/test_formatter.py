@@ -46,3 +46,20 @@ def test_center_prepared_for_telegram():
     prepared = prepare_markdown_for_telegram("<aside>Строка 1\nСтрока 2</aside>")
     assert "<aside>" in prepared
     assert "<br>" in prepared
+
+
+def test_uploaded_image_in_preview():
+    html = preview_html("![](/uploads/photo.png)\n\nТекст под фото")
+    assert 'class="tg-image"' in html
+    assert "/uploads/photo.png" in html
+    assert "Текст под фото" in html
+
+
+def test_cyrillic_italic_in_preview():
+    html = preview_html("Обычный *курсив* текст")
+    assert "<em>курсив</em>" in html
+
+
+def test_cyrillic_underscore_italic_in_preview():
+    html = preview_html("Обычный _курсив_ текст")
+    assert "<em>курсив</em>" in html

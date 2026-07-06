@@ -23,6 +23,8 @@ CHECKLIST_LINE = re.compile(r"^- \[([ xX])\]\s+(.*)$")
 VIDEO_EXT = {".mp4", ".webm", ".mov"}
 AUDIO_EXT = {".mp3", ".ogg", ".wav", ".m4a"}
 
+_CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
+
 
 def _media_kind(url: str) -> str:
     ext = Path(url.split("?")[0]).suffix.lower()
@@ -86,7 +88,20 @@ def _preprocess_checklists(text: str) -> str:
     return "\n".join(out)
 
 
+def _preprocess_underscore_italic(text: str) -> str:
+    """Python-Markdown does not treat _word_ as emphasis when word contains Cyrillic."""
+
+    def repl(match: re.Match) -> str:
+        inner = match.group(1)
+        if _CYRILLIC_RE.search(inner):
+            return f"*{inner}*"
+        return match.group(0)
+
+    return re.sub(r"_([^_\n]+?)_", repl, text)
+
+
 def _preprocess_rich_inline(text: str) -> str:
+    text = _preprocess_underscore_italic(text)
     text = re.sub(r"\$\$(.+?)\$\$", r'<div class="tg-math-block">\1</div>', text, flags=re.DOTALL)
     text = re.sub(r"(?<!\$)\$([^$\n]+?)\$(?!\$)", r'<span class="tg-math">\1</span>', text)
     text = re.sub(r"\|\|([^|\n]+?)\|\|", r'<span class="tg-spoiler">\1</span>', text)

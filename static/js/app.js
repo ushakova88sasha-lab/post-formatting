@@ -501,6 +501,10 @@ async function updatePreview(force = false) {
   if (!force && window.previewEditor?.isEditing()) return;
   if (!force && window.leftEditor?.isEditing?.()) return;
 
+  if (window.leftEditor?.isVisualMode?.()) {
+    window.leftEditor.syncToTextarea?.({ force: true, silent: true });
+  }
+
   const content = document.getElementById("post-content").value;
   try {
     if (!content.trim()) {
