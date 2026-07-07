@@ -1,7 +1,7 @@
-import httpx
 from fastapi import FastAPI
 
 from app.settings_store import get_bot_token, get_channel_id
+from app.telegram_http import telegram_async_client
 
 
 async def resolve_channel_display() -> str:
@@ -17,7 +17,7 @@ async def resolve_channel_display() -> str:
 
     try:
         url = f"https://api.telegram.org/bot{token}/getChat"
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with telegram_async_client(timeout=15.0) as client:
             response = await client.get(url, params={"chat_id": channel_id})
             data = response.json()
         if data.get("ok"):

@@ -1,8 +1,7 @@
-import httpx
-
 from app.image_host import resolve_media_for_telegram
 from app.markdown_telegram import prepare_markdown_for_telegram
 from app.settings_store import get_bot_token, get_channel_id
+from app.telegram_http import telegram_async_client
 
 
 class TelegramError(Exception):
@@ -47,7 +46,7 @@ async def send_message(text: str, reply_markup: dict | None = None) -> int:
     if reply_markup:
         payload["reply_markup"] = reply_markup
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with telegram_async_client(timeout=30.0) as client:
         response = await client.post(url, json=payload)
         data = response.json()
 
@@ -66,7 +65,7 @@ async def get_custom_emoji_stickers(custom_emoji_ids: list[str]) -> list[dict]:
         return []
 
     url = f"https://api.telegram.org/bot{token}/getCustomEmojiStickers"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with telegram_async_client(timeout=30.0) as client:
         response = await client.post(url, json={"custom_emoji_ids": custom_emoji_ids})
         data = response.json()
 
@@ -122,7 +121,7 @@ async def get_sticker_set(name: str) -> dict:
         raise TelegramError("Укажите токен бота в Настройках")
 
     url = f"https://api.telegram.org/bot{token}/getStickerSet"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with telegram_async_client(timeout=30.0) as client:
         response = await client.get(url, params={"name": name})
         data = response.json()
 
@@ -139,7 +138,7 @@ async def get_telegram_file_path(file_id: str) -> str:
         raise TelegramError("Укажите токен бота в Настройках")
 
     url = f"https://api.telegram.org/bot{token}/getFile"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with telegram_async_client(timeout=30.0) as client:
         response = await client.get(url, params={"file_id": file_id})
         data = response.json()
 
@@ -160,7 +159,7 @@ async def download_telegram_file(file_path: str) -> bytes:
         raise TelegramError("Укажите токен бота в Настройках")
 
     url = f"https://api.telegram.org/file/bot{token}/{file_path}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with telegram_async_client(timeout=30.0) as client:
         response = await client.get(url)
         response.raise_for_status()
         return response.content
@@ -173,7 +172,7 @@ async def verify_bot() -> dict:
         raise TelegramError("Токен бота не указан")
 
     url = f"https://api.telegram.org/bot{token}/getMe"
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with telegram_async_client(timeout=15.0) as client:
         response = await client.get(url)
         data = response.json()
 

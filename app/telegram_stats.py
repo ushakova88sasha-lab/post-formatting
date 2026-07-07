@@ -1,11 +1,11 @@
 import json
 from datetime import datetime
 
-import httpx
 from sqlalchemy.orm import Session
 
 from app.database import Post, PostChannelStats
 from app.settings_store import get_bot_token, get_channel_id
+from app.telegram_http import telegram_async_client
 
 _STATS_NOTE = (
     "Просмотры и пересылки отдельного поста Telegram Bot API не отдаёт. "
@@ -51,7 +51,7 @@ def build_telegram_post_url(
 
 async def _fetch_channel_subscribers(token: str, channel_id: str) -> int | None:
     url = f"https://api.telegram.org/bot{token}/getChatMemberCount"
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with telegram_async_client(timeout=15.0) as client:
         response = await client.get(url, params={"chat_id": channel_id})
         data = response.json()
     if not data.get("ok"):
@@ -61,7 +61,7 @@ async def _fetch_channel_subscribers(token: str, channel_id: str) -> int | None:
 
 async def _fetch_channel_username(token: str, channel_id: str) -> str | None:
     url = f"https://api.telegram.org/bot{token}/getChat"
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with telegram_async_client(timeout=15.0) as client:
         response = await client.get(url, params={"chat_id": channel_id})
         data = response.json()
     if not data.get("ok"):
