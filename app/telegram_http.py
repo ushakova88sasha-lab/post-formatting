@@ -5,7 +5,7 @@ from app.config import settings
 
 def telegram_client_kwargs(timeout: float) -> dict:
     kwargs: dict = {"timeout": timeout}
-    proxy_url = settings.telegram_proxy_url.strip()
+    proxy_url = settings.proxy.strip()
     if proxy_url:
         kwargs["proxy"] = proxy_url
     return kwargs

@@ -39,7 +39,7 @@ nano .env
 |------------|----------|
 | `TELEGRAM_BOT_TOKEN` | Токен от [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHANNEL_ID` | `@username_канала` или числовой ID `-1001234567890` |
-| `TELEGRAM_PROXY_URL` | Опциональный HTTP/HTTPS-прокси для запросов к Telegram API, например `http://user:password@proxy.example.com:8080` |
+| `PROXY` | Опциональный HTTP/HTTPS-прокси для запросов к Telegram API, например `http://user:password@proxy.example.com:8080` |
 | `ADMIN_USERNAME` | Логин для входа в панель |
 | `ADMIN_PASSWORD` | Пароль (используйте сложный) |
 | `SESSION_SECRET` | Случайная строка 32+ символов |
