@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str = ""
     telegram_channel_id: str = ""
+    telegram_proxy_url: str = ""
     admin_username: str
     admin_password: str
     session_secret: str
